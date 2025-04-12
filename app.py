@@ -23,6 +23,15 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 MAX_FILES = 3
 TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
 
+ALLOWED_REPORT_TYPES = {
+    'BCDongMoCua',
+    'BaoCaoGiaoBan',
+    'ThayDoiGia',
+    'BatTatMatTien',
+    'BCDaoTao',
+    'Custom'
+}
+
 @app.route('/')
 def index():
     logger.debug("Serving index page")
@@ -46,9 +55,13 @@ def upload():
 
         report_type = request.form.get('reportType')
         custom_name = request.form.get('customName', '')
-        if not report_type:
-            logger.error("Missing report type")
-            return jsonify({'success': False, 'message': 'Vui lòng chọn loại báo cáo!'}), 400
+        if not report_type or report_type not in ALLOWED_REPORT_TYPES:
+            logger.error(f"Invalid report type: {report_type}")
+            return jsonify({'success': False, 'message': 'Loại báo cáo không hợp lệ!'}), 400
+
+        if report_type == 'Custom' and not custom_name.strip():
+            logger.error("Missing custom name for Custom report")
+            return jsonify({'success': False, 'message': 'Vui lòng nhập tên file cho báo cáo tùy chỉnh!'}), 400
 
         logger.debug(f"Connecting to FTP: {ftp['server']}")
         ftp_conn = ftplib.FTP()
@@ -89,11 +102,7 @@ def upload():
 
             extension = os.path.splitext(file.filename)[1].lower()
             file_prefix = report_type if report_type != 'Custom' else custom_name
-            if not file_prefix:
-                logger.warning("Empty file prefix for Custom report")
-                continue
             file_prefix = sanitize_file_name(file_prefix)  # Làm sạch tên
-            file_prefix = to_title_case(file_prefix)  # Viết hoa chuẩn
             file_name = f"{date}-{file_prefix}-{i+1}{extension}" if len(files) > 1 else f"{date}-{file_prefix}{extension}"
             remote_file = file_name
 
@@ -134,12 +143,9 @@ def upload():
                 pass
 
 def sanitize_file_name(name):
-    """Sanitize file name to match client-side logic"""
-    return re.sub(r'[^a-z0-9]', '', name.lower()).strip()
-
-def to_title_case(name):
-    """Convert to TitleCase, e.g., bcdongmocua -> BCDongMoCua"""
-    return ''.join(word.capitalize() for word in re.split(r'([a-z]+)', name) if word.isalpha())
+    """Sanitize file name, keep case and safe characters"""
+    # Loại bỏ ký tự nguy hiểm, giữ nguyên chữ hoa/thường
+    return re.sub(r'[\/\\<>:"?*|]', '', name).strip()[:50]
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
