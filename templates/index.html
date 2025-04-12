@@ -27,7 +27,7 @@
             </select>
             <input type="text" id="customName" name="customName" placeholder="Nhập tên file (nếu chọn 'Khác')" style="display:none" aria-label="Tên file tùy chỉnh">
             <div class="drop-zone" id="dropZone" aria-label="Kéo thả ảnh vào đây">
-                Kéo thả tối đa 3 ảnh) hoặc nhấn để chọn
+                Kéo thả tối đa 3 ảnh hoặc nhấn để chọn
                 <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/gif" multiple style="display:none" aria-hidden="true">
             </div>
             <div class="preview-container" id="previewContainer"></div>
@@ -47,7 +47,7 @@
 
     <script>
         const CONFIG = {
-            MAX_FILE_SIZE: 10 * 1024 * 1024, // 3MB, đồng bộ với backend
+            MAX_FILE_SIZE: 10 * 1024 * 1024,
             MAX_FILES: 3,
             ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
         };
@@ -72,7 +72,7 @@
         };
 
         function sanitizeFileName(name) {
-            return name.toLowerCase().replace(/[^a-z0-9-_]/g, '').slice(0, 50);
+            return name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
         }
 
         function showError(message) {
@@ -102,6 +102,9 @@
         elements.reportType.addEventListener('change', () => {
             elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
             elements.customName.value = '';
+            if (elements.customName.style.display === 'block') {
+                elements.customName.focus();
+            }
         });
 
         elements.dropZone.addEventListener('click', () => {
@@ -176,6 +179,11 @@
             }
             if (!elements.reportType.value) {
                 showError('Vui lòng chọn loại báo cáo!');
+                return;
+            }
+            if (elements.reportType.value === 'Custom' && !elements.customName.value.trim()) {
+                showError('Vui lòng nhập tên file cho báo cáo tùy chỉnh!');
+                elements.customName.focus();
                 return;
             }
 
