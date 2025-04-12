@@ -19,7 +19,7 @@ FTP_ACCOUNTS = {
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 3MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 MAX_FILES = 3
 TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
 
@@ -46,12 +46,15 @@ def upload():
 
         report_type = request.form.get('reportType')
         custom_name = request.form.get('customName', '')
+        if not report_type:
+            logger.error("Missing report type")
+            return jsonify({'success': False, 'message': 'Vui lòng chọn loại báo cáo!'}), 400
 
         logger.debug(f"Connecting to FTP: {ftp['server']}")
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
-        ftp_conn.set_pasv(True)
+        ftp_conn.set_pasv(False)
 
         date = datetime.now(TIMEZONE).strftime('%d.%m.%y')  # UTC+7
         ftp_directory = f"/KSQT/{date}/"
@@ -84,9 +87,12 @@ def upload():
                 logger.warning(f"File too large: {file.filename}, size: {file_size}")
                 continue
 
-            original_name = os.path.splitext(file.filename)[0]
             extension = os.path.splitext(file.filename)[1].lower()
-            file_prefix = sanitize_file_name(custom_name if report_type == 'Custom' and custom_name else report_type)
+            file_prefix = report_type if report_type != 'Custom' else custom_name
+            if not file_prefix:
+                logger.warning("Empty file prefix for Custom report")
+                continue
+            file_prefix = sanitize_file_name(file_prefix)  # Làm sạch tên
             file_prefix = to_title_case(file_prefix)  # Viết hoa chuẩn
             file_name = f"{date}-{file_prefix}-{i+1}{extension}" if len(files) > 1 else f"{date}-{file_prefix}{extension}"
             remote_file = file_name
@@ -99,7 +105,7 @@ def upload():
 
             logger.debug(f"Uploading to: {ftp_directory}{remote_file}")
             ftp_conn.storbinary(f'STOR {remote_file}', file.stream)
-            uploaded_files.append(remote_file)  # Lưu tên đã chuẩn hóa
+            uploaded_files.append(remote_file)
             existing_files.add(remote_file.lower())
 
         if not uploaded_files:
@@ -129,11 +135,11 @@ def upload():
 
 def sanitize_file_name(name):
     """Sanitize file name to match client-side logic"""
-    return re.sub(r'[^a-z0-9-_]', '', name.lower()).strip()
+    return re.sub(r'[^a-z0-9]', '', name.lower()).strip()
 
 def to_title_case(name):
     """Convert to TitleCase, e.g., bcdongmocua -> BCDongMoCua"""
-    return ''.join(word.capitalize() for word in name.split('-'))
+    return ''.join(word.capitalize() for word in re.split(r'([a-z]+)', name) if word.isalpha())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
