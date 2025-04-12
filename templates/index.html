@@ -1,126 +1,254 @@
-from flask import Flask, request, render_template, jsonify
-import ftplib
-import os
-from datetime import datetime
-import logging
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Ảnh Báo Cáo</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Ảnh Báo Cáo</h2>
+        <form id="uploadForm" enctype="multipart/form-data" aria-label="Form upload ảnh">
+            <select id="ftpAccount" name="ftpAccount" aria-label="Tài khoản FTP" required>
+                <option value="" disabled selected>Chọn tài khoản FTP</option>
+                <option value="1">BN_LTT - Bắc Ninh</option>
+                <option value="2">HN_NVL - Sài Đồng</option>
+                <option value="3">HN_NVC - Long Biên</option>
+            </select>
+            <select id="reportType" name="reportType" aria-label="Loại báo cáo" required>
+                <option value="" disabled selected>Chọn loại báo cáo</option>
+                <option value="BCDongMoCua">Báo Cáo Biên Bản Đóng Mở Cửa</option>
+                <option value="BaoCaoGiaoBan">Báo Cáo Giao Ban</option>
+                <option value="ThayDoiGia">Báo Cáo Thay Đổi Giá</option>
+                <option value="BatTatMatTien">Báo Cáo Bật Tắt Mặt Tiền</option>
+                <option value="BCDaoTao">Báo Cáo Đào Tạo</option>
+                <option value="Custom">Bổ Sung Báo Cáo Khác</option>
+            </select>
+            <input type="text" id="customName" name="customName" placeholder="Nhập tên file (nếu chọn 'Khác')" style="display:none" aria-label="Tên file tùy chỉnh">
+            <div class="drop-zone" id="dropZone" aria-label="Kéo thả ảnh vào đây">
+                Kéo thả tối đa 3 ảnh (mỗi ảnh ≤ 3MB) hoặc nhấn để chọn
+                <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/gif" multiple style="display:none" aria-hidden="true">
+            </div>
+            <div class="preview-container" id="previewContainer"></div>
+            <button type="submit" id="uploadButton">Upload</button>
+            <button type="button" id="cancelButton" style="display:none">Hủy</button>
+            <progress id="progress" value="0" max="100" style="display:none" aria-label="Thanh tiến trình upload"></progress>
+            <div id="progress-info"></div>
+            <div id="file-progress" aria-live="polite"></div>
+            <div id="result" aria-live="polite"></div>
+        </form>
+    </div>
+    <div class="popup" id="successPopup" role="dialog" aria-labelledby="successPopupTitle">
+        <h3 id="successPopupTitle">Upload Thành Công!</h3>
+        <p id="successMessage"></p>
+        <button onclick="closePopup()">OK</button>
+    </div>
 
-app = Flask(__name__)
+    <script>
+        const CONFIG = {
+            MAX_FILE_SIZE: 10 * 1024 * 1024, // 3MB, đồng bộ với backend
+            MAX_FILES: 3,
+            ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
+        };
 
-# Thiết lập logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
-logger = logging.getLogger(__name__)
+        const state = { isUploading: false, abortController: null };
+        const elements = {
+            form: document.getElementById('uploadForm'),
+            ftpAccount: document.getElementById('ftpAccount'),
+            reportType: document.getElementById('reportType'),
+            customName: document.getElementById('customName'),
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('images'),
+            previewContainer: document.getElementById('previewContainer'),
+            uploadButton: document.getElementById('uploadButton'),
+            cancelButton: document.getElementById('cancelButton'),
+            progress: document.getElementById('progress'),
+            progressInfo: document.getElementById('progress-info'),
+            fileProgress: document.getElementById('file-progress'),
+            result: document.getElementById('result'),
+            successPopup: document.getElementById('successPopup'),
+            successMessage: document.getElementById('successMessage')
+        };
 
-FTP_ACCOUNTS = {
-    '1': {'server': '123.30.3.61', 'username': 'ksqtbacninh', 'password': 'ksqtvhc', 'description': 'BN_LTT - Bắc Ninh'},
-    '2': {'server': '123.30.3.61', 'username': 'ksqtsaidong', 'password': 'ksqtvhc', 'description': 'HN_NVL - Sài Đồng'},
-    '3': {'server': '123.30.3.61', 'username': 'ksqtlongbien', 'password': 'ksqtvhc', 'description': 'HN_NVC - Long Biên'}
-}
+        function sanitizeFileName(name) {
+            return name.toLowerCase().replace(/[^a-z0-9-_]/g, '').slice(0, 50);
+        }
 
-ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 3 * 1024 * 1024  # Giảm xuống 3MB để tiết kiệm RAM
-MAX_FILES = 3
+        function showError(message) {
+            elements.result.classList.add('error');
+            elements.result.textContent = `Lỗi: ${message}`;
+            elements.fileProgress.textContent = '';
+        }
 
-@app.route('/')
-def index():
-    logger.debug("Serving index page")
-    return render_template('index.html')
+        function clearError() {
+            elements.result.classList.remove('error');
+            elements.result.textContent = '';
+        }
 
-@app.route('/upload', methods=['POST'])
-def upload():
-    ftp_conn = None
-    try:
-        logger.debug("Upload request received")
-        # Trích xuất dữ liệu trong context chính
-        ftp_account_id = request.form.get('ftpAccount')
-        if not ftp_account_id or ftp_account_id not in FTP_ACCOUNTS:
-            logger.error(f"Invalid FTP account: {ftp_account_id}")
-            return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'})
+        function updateUI(uploading) {
+            state.isUploading = uploading;
+            elements.uploadButton.disabled = uploading;
+            elements.uploadButton.textContent = uploading ? 'Đang upload...' : 'Upload';
+            elements.cancelButton.style.display = uploading ? 'inline-block' : 'none';
+            elements.progress.style.display = uploading ? 'block' : 'none';
+            elements.progressInfo.textContent = uploading ? 'Đang xử lý...' : '';
+            if (!uploading) {
+                elements.fileProgress.textContent = '';
+                elements.progress.value = 0;
+            }
+        }
 
-        ftp = FTP_ACCOUNTS[ftp_account_id]
-        files = request.files.getlist('images[]')
-        if not files or len(files) > MAX_FILES:
-            logger.error(f"Invalid file count: {len(files)}")
-            return jsonify({'success': False, 'message': f'Vui lòng chọn tối đa {MAX_FILES} ảnh!'})
+        elements.reportType.addEventListener('change', () => {
+            elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
+            elements.customName.value = '';
+        });
 
-        report_type = request.form.get('reportType')
-        custom_name = request.form.get('customName', '')
+        elements.dropZone.addEventListener('click', () => {
+            if (!state.isUploading) elements.fileInput.click();
+        });
 
-        logger.debug(f"Connecting to FTP: {ftp['server']}")
-        ftp_conn = ftplib.FTP()
-        ftp_conn.connect(ftp['server'], timeout=30)
-        ftp_conn.login(ftp['username'], ftp['password'])
-        ftp_conn.set_pasv(True)
+        elements.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!state.isUploading) elements.dropZone.classList.add('dragover');
+        });
 
-        date = datetime.now().strftime('%d.%m.%y')
-        ftp_directory = f"/KSQT/{date}/"
-        logger.debug(f"Checking FTP directory: {ftp_directory}")
-        try:
-            ftp_conn.cwd(ftp_directory)
-        except ftplib.all_errors:
-            logger.debug(f"Creating FTP directory: {ftp_directory}")
-            ftp_conn.mkd(ftp_directory)
-            ftp_conn.cwd('/')
+        elements.dropZone.addEventListener('dragleave', () => {
+            elements.dropZone.classList.remove('dragover');
+        });
 
-        existing_files = set(ftp_conn.nlst(ftp_directory) or [])
-        logger.debug(f"Existing files: {existing_files}")
+        elements.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('dragover');
+            if (!state.isUploading) {
+                elements.fileInput.files = e.dataTransfer.files;
+                previewImages();
+            }
+        });
 
-        uploaded_files = []
-        for i, file in enumerate(files[:MAX_FILES]):
-            logger.debug(f"Processing file: {file.filename}")
-            if file.mimetype not in ALLOWED_TYPES:
-                logger.warning(f"Invalid file type: {file.mimetype}")
-                continue
-            file.seek(0, os.SEEK_END)
-            file_size = file.tell()
-            file.seek(0)
-            if file_size > MAX_FILE_SIZE:
-                logger.warning(f"File too large: {file.filename}, size: {file_size}")
-                continue
+        elements.fileInput.addEventListener('change', previewImages);
 
-            original_name = os.path.splitext(file.filename)[0]
-            extension = os.path.splitext(file.filename)[1].lower()
-            file_prefix = sanitize_file_name(custom_name if report_type == 'Custom' and custom_name else report_type)
-            file_name = f"{date}-{file_prefix}-{i+1}{extension}" if len(files) > 1 else f"{date}-{file_prefix}{extension}"
-            remote_file = f"{ftp_directory}{file_name}"
+        elements.cancelButton.addEventListener('click', () => {
+            if (state.abortController) {
+                state.abortController.abort();
+                updateUI(false);
+                showError('Upload đã bị hủy');
+            }
+        });
 
-            counter = 1
-            while remote_file in existing_files:
-                remote_file = f"{ftp_directory}{sanitize_file_name(original_name)}-{counter}{extension}"
-                counter += 1
+        function previewImages() {
+            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+            elements.previewContainer.innerHTML = '';
+            clearError();
 
-            logger.debug(f"Uploading to: {remote_file}")
-            ftp_conn.storbinary(f'STOR {remote_file}', file.stream)
-            uploaded_files.append(file_name)
-            existing_files.add(remote_file)
+            if (elements.fileInput.files.length > CONFIG.MAX_FILES) {
+                showError(`Chỉ được chọn tối đa ${CONFIG.MAX_FILES} ảnh!`);
+                elements.fileInput.value = '';
+                return;
+            }
 
-        if not uploaded_files:
-            logger.warning("No files uploaded")
-            return jsonify({'success': False, 'message': 'Không có file nào được upload thành công'})
+            for (const file of files) {
+                if (!CONFIG.ALLOWED_TYPES.includes(file.type)) {
+                    showError(`File ${file.name} không phải ảnh hợp lệ (chỉ chấp nhận JPEG, PNG, GIF)!`);
+                    continue;
+                }
+                if (file.size > CONFIG.MAX_FILE_SIZE) {
+                    showError(`File ${file.name} vượt quá 3MB!`);
+                    continue;
+                }
 
-        logger.info(f"Uploaded files: {uploaded_files}")
-        return jsonify({
-            'success': True,
-            'message': f"Đã upload thành công {len(uploaded_files)} file lên {ftp['description']}: {', '.join(uploaded_files)}",
-            'files': uploaded_files
-        })
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview';
+                img.alt = `Xem trước ${file.name}`;
+                img.onerror = () => showError(`Không thể hiển thị ảnh ${file.name}`);
+                elements.previewContainer.appendChild(img);
+            }
+        }
 
-    except ftplib.all_errors as e:
-        logger.error(f"FTP error: {str(e)}")
-        return jsonify({'success': False, 'message': f'Lỗi FTP: {str(e)}'})
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({'success': False, 'message': f'Lỗi không xác định: {str(e)}'})
-    finally:
-        if ftp_conn:
-            try:
-                ftp_conn.quit()
-                logger.debug("FTP connection closed")
-            except:
-                pass
+        elements.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
 
-def sanitize_file_name(name):
-    """Sanitize file name to match client-side logic"""
-    return name.lower().replace('[^a-z0-9-_]', '').strip()
+            if (!elements.ftpAccount.value) {
+                showError('Vui lòng chọn tài khoản FTP!');
+                return;
+            }
+            if (!elements.reportType.value) {
+                showError('Vui lòng chọn loại báo cáo!');
+                return;
+            }
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+            if (files.length === 0) {
+                showError('Vui lòng chọn ít nhất một ảnh!');
+                return;
+            }
+
+            updateUI(true);
+            state.abortController = new AbortController();
+            const formData = new FormData();
+            formData.append('ftpAccount', elements.ftpAccount.value);
+            formData.append('reportType', elements.reportType.value);
+            formData.append('customName', sanitizeFileName(elements.customName.value));
+
+            for (const file of files) {
+                formData.append('images[]', file);
+            }
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: state.abortController.signal
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Lỗi server không xác định');
+                    console.error('Fetch error:', response.status, errorText);
+                    throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
+                }
+
+                const json = await response.json();
+                if (json.success) {
+                    showPopup(json.message);
+                    if (json.files) {
+                        json.files.forEach(file => {
+                            elements.fileProgress.textContent += `Đã upload: ${file}\n`;
+                        });
+                    }
+                    elements.progress.value = 100;
+                    elements.progressInfo.textContent = 'Hoàn tất!';
+                } else {
+                    showError(json.message);
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showError(error.message);
+                }
+            } finally {
+                updateUI(false);
+                state.abortController = null;
+            }
+        });
+
+        function showPopup(message) {
+            elements.successMessage.textContent = message;
+            elements.successPopup.style.display = 'block';
+        }
+
+        function closePopup() {
+            elements.successPopup.style.display = 'none';
+            elements.form.reset();
+            elements.previewContainer.innerHTML = '';
+            clearError();
+            elements.customName.style.display = 'none';
+            elements.progress.style.display = 'none';
+            elements.progressInfo.textContent = '';
+            elements.fileProgress.textContent = '';
+            elements.ftpAccount.value = '';
+            elements.reportType.value = '';
+        }
+    </script>
+</body>
+</html>
