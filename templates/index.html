@@ -48,7 +48,7 @@
     <script>
         const CONFIG = {
             MAX_FILE_SIZE: 10 * 1024 * 1024,
-            MAX_FILES: 3,
+            MAX_FILES: 5,
             ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
         };
 
@@ -72,8 +72,7 @@
         };
 
         function sanitizeFileName(name) {
-            // Chỉ loại bỏ ký tự nguy hiểm, giữ nguyên định dạng chữ hoa/thường
-            return name.replace(/[\/\\<>:"?*|]/g, '').trim().slice(0, 50);
+            return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
         }
 
         function showError(message) {
@@ -157,7 +156,7 @@
                     continue;
                 }
                 if (file.size > CONFIG.MAX_FILE_SIZE) {
-                    showError(`File ${file.name} vượt quá 10MB!`);
+                    showError(`File ${file.name} vượt quá 3MB!`);
                     continue;
                 }
 
@@ -199,7 +198,7 @@
             const formData = new FormData();
             formData.append('ftpAccount', elements.ftpAccount.value);
             formData.append('reportType', elements.reportType.value);
-            formData.append('customName', elements.reportType.value === 'Custom' ? sanitizeFileName(elements.customName.value) : '');
+            formData.append('customName', sanitizeFileName(elements.customName.value));
 
             for (const file of files) {
                 formData.append('images[]', file);
