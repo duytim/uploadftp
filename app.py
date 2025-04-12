@@ -18,8 +18,8 @@ FTP_ACCOUNTS = {
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
-MAX_FILES = 3
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 3MB
+MAX_FILES = 5
 TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
 
 @app.route('/')
