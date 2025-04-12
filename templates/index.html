@@ -156,79 +156,64 @@
             }
         }
 
-        elements.form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearError();
+		elements.form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			clearError();
 
-            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
-            if (files.length === 0) {
-                showError('Vui lòng chọn ít nhất một ảnh!');
-                return;
-            }
+			const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+			if (files.length === 0) {
+				showError('Vui lòng chọn ít nhất một ảnh!');
+				return;
+			}
 
-            updateUI(true);
-            state.abortController = new AbortController();
-            const formData = new FormData();
-            formData.append('ftpAccount', elements.ftpAccount.value);
-            formData.append('reportType', elements.reportType.value);
-            formData.append('customName', sanitizeFileName(elements.customName.value));
+			updateUI(true);
+			state.abortController = new AbortController();
+			const formData = new FormData();
+			formData.append('ftpAccount', elements.ftpAccount.value);
+			formData.append('reportType', elements.reportType.value);
+			formData.append('customName', sanitizeFileName(elements.customName.value));
 
-            for (const file of files) {
-                formData.append('images[]', file);
-            }
+			for (const file of files) {
+				formData.append('images[]', file);
+			}
 
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData,
-                    signal: state.abortController.signal
-                });
+			try {
+				const response = await fetch('/upload', {
+					method: 'POST',
+					body: formData,
+					signal: state.abortController.signal
+				});
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let accumulatedResponse = '';
+				if (!response.ok) {
+					const errorText = await response.text().catch(() => 'Không có thông tin lỗi');
+		> Không có thông tin lỗi');
+					console.error('Fetch error:', response.status, errorText);
+					throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
+				}
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+				const json = await response.json();
+				if (json.success) {
+					showPopup(json.message);
+					if (json.files) {
+						json.files.forEach(file => {
+							elements.fileProgress.textContent += `Đã upload thành công: ${file}\n`;
+						});
+					}
+				} else {
+					showError(json.message);
+				}
 
-                    const chunk = decoder.decode(value, { stream: true });
-                    accumulatedResponse += chunk;
-                    const lines = accumulatedResponse.split('\n').filter(line => line.trim());
-
-                    lines.forEach((line, index) => {
-                        try {
-                            const json = JSON.parse(line);
-                            if (json.fileProgress) {
-                                elements.fileProgress.textContent += `Đã upload thành công: ${json.fileProgress}\n`;
-                            }
-                            if (json.success !== undefined) {
-                                if (json.success) {
-                                    showPopup(json.message);
-                                } else {
-                                    showError(json.message);
-                                }
-                            }
-                        } catch (err) {
-                            if (index === lines.length - 1) {
-                                accumulatedResponse = line;
-                            }
-                        }
-                    });
-
-                    elements.progress.value = Math.min((formData.size ? (formData.size / 5 / 1024 / 1024) : 0), 100);
-                    elements.progressInfo.textContent = `Đang upload...`;
-                }
-
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    showError(error.message);
-                }
-            } finally {
-                updateUI(false);
-                state.abortController = null;
-            }
-        });
+				elements.progress.value = 100;
+				elements.progressInfo.textContent = 'Hoàn tất upload!';
+			} catch (error) {
+				if (error.name !== 'AbortError') {
+					showError(error.message);
+				}
+			} finally {
+				updateUI(false);
+				state.abortController = null;
+			}
+		});
 
         function showPopup(message) {
             elements.successMessage.textContent = message;
