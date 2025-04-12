@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 import logging
 import pytz
-import re
 
 app = Flask(__name__)
 
@@ -19,18 +18,9 @@ FTP_ACCOUNTS = {
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 10 * 1024 * 1024
+MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
 MAX_FILES = 3
 TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
-
-ALLOWED_REPORT_TYPES = {
-    'BCDongMoCua',
-    'BaoCaoGiaoBan',
-    'ThayDoiGia',
-    'BatTatMatTien',
-    'BCDaoTao',
-    'Custom'
-}
 
 @app.route('/')
 def index():
@@ -54,12 +44,11 @@ def upload():
             return jsonify({'success': False, 'message': f'Vui lòng chọn tối đa {MAX_FILES} ảnh!'}), 400
 
         report_type = request.form.get('reportType')
-        custom_name = request.form.get('customName', '')
-        if not report_type or report_type not in ALLOWED_REPORT_TYPES:
-            logger.error(f"Invalid report type: {report_type}")
-            return jsonify({'success': False, 'message': 'Loại báo cáo không hợp lệ!'}), 400
-
-        if report_type == 'Custom' and not custom_name.strip():
+        custom_name = request.form.get('customName', '').strip()
+        if not report_type:
+            logger.error("Missing report type")
+            return jsonify({'success': False, 'message': 'Vui lòng chọn loại báo cáo!'}), 400
+        if report_type == 'Custom' and not custom_name:
             logger.error("Missing custom name for Custom report")
             return jsonify({'success': False, 'message': 'Vui lòng nhập tên file cho báo cáo tùy chỉnh!'}), 400
 
@@ -67,7 +56,7 @@ def upload():
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
-        ftp_conn.set_pasv(False)
+        ftp_conn.set_pasv(True)
 
         date = datetime.now(TIMEZONE).strftime('%d.%m.%y')  # UTC+7
         ftp_directory = f"/KSQT/{date}/"
@@ -79,10 +68,11 @@ def upload():
             ftp_conn.mkd(ftp_directory)
             ftp_conn.cwd(ftp_directory)
 
+        # Lấy danh sách file
         existing_files = set()
         try:
             existing_files = set(ftp_conn.nlst() or [])
-            existing_files = {f.lower() for f in existing_files}  # Chuẩn hóa để so sánh
+            existing_files = {f.lower() for f in existing_files}
         except ftplib.all_errors as e:
             logger.warning(f"Failed to list files: {str(e)}")
         logger.debug(f"Existing files: {existing_files}")
@@ -102,10 +92,10 @@ def upload():
 
             extension = os.path.splitext(file.filename)[1].lower()
             file_prefix = report_type if report_type != 'Custom' else custom_name
-            file_prefix = sanitize_file_name(file_prefix)  # Làm sạch tên
-            file_name = f"{date}-{file_prefix}-{i+1}{extension}" if len(files) > 1 else f"{date}-{file_prefix}{extension}"
+            file_name = f"{date}-{file_prefix}{extension}" if len(files) == 1 else f"{date}-{file_prefix}-{i+1}{extension}"
             remote_file = file_name
 
+            # Xử lý trùng tên
             counter = 1
             base_name = f"{date}-{file_prefix}"
             while remote_file.lower() in existing_files:
@@ -141,11 +131,6 @@ def upload():
                 logger.debug("FTP connection closed")
             except:
                 pass
-
-def sanitize_file_name(name):
-    """Sanitize file name, keep case and safe characters"""
-    # Loại bỏ ký tự nguy hiểm, giữ nguyên chữ hoa/thường
-    return re.sub(r'[\/\\<>:"?*|]', '', name).strip()[:50]
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
