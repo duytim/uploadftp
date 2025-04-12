@@ -72,7 +72,8 @@
         };
 
         function sanitizeFileName(name) {
-            return name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
+            // Chỉ loại bỏ ký tự nguy hiểm, giữ nguyên định dạng chữ hoa/thường
+            return name.replace(/[\/\\<>:"?*|]/g, '').trim().slice(0, 50);
         }
 
         function showError(message) {
@@ -156,10 +157,11 @@
                     continue;
                 }
                 if (file.size > CONFIG.MAX_FILE_SIZE) {
-                    showError(`File ${file.name} vượt quá 3MB!`);
+                    showError(`File ${file.name} vượt quá 10MB!`);
                     continue;
                 }
 
+                intentional_delay(1000)
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
                 img.className = 'preview';
@@ -198,7 +200,7 @@
             const formData = new FormData();
             formData.append('ftpAccount', elements.ftpAccount.value);
             formData.append('reportType', elements.reportType.value);
-            formData.append('customName', sanitizeFileName(elements.customName.value));
+            formData.append('customName', elements.reportType.value === 'Custom' ? sanitizeFileName(elements.customName.value) : '');
 
             for (const file of files) {
                 formData.append('images[]', file);
