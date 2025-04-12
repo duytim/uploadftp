@@ -49,7 +49,7 @@ def upload():
             ftp_conn = ftplib.FTP()
             ftp_conn.connect(ftp['server'], timeout=10)
             ftp_conn.login(ftp['username'], ftp['password'])
-            ftp_conn.set_pasv(True)
+            ftp_conn.set_pasv(False)
 
             date = datetime.now().strftime('%d.%m.%y')
             ftp_directory = f"/KSQT/{date}/"
