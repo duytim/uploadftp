@@ -17,7 +17,7 @@ FTP_ACCOUNTS = {
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
+MAX_FILE_SIZE = 3 * 1024 * 1024  # Giảm xuống 3MB để tiết kiệm RAM
 MAX_FILES = 3
 
 @app.route('/')
@@ -49,7 +49,7 @@ def upload():
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=30)
         ftp_conn.login(ftp['username'], ftp['password'])
-        ftp_conn.set_pasv(False)
+        ftp_conn.set_pasv(True)
 
         date = datetime.now().strftime('%d.%m.%y')
         ftp_directory = f"/KSQT/{date}/"
@@ -61,7 +61,7 @@ def upload():
             ftp_conn.mkd(ftp_directory)
             ftp_conn.cwd('/')
 
-        existing_files = set(ftp_conn.nlst(ftp_directory))
+        existing_files = set(ftp_conn.nlst(ftp_directory) or [])
         logger.debug(f"Existing files: {existing_files}")
 
         uploaded_files = []
@@ -79,13 +79,13 @@ def upload():
 
             original_name = os.path.splitext(file.filename)[0]
             extension = os.path.splitext(file.filename)[1].lower()
-            file_prefix = custom_name if report_type == 'Custom' and custom_name else report_type
+            file_prefix = sanitize_file_name(custom_name if report_type == 'Custom' and custom_name else report_type)
             file_name = f"{date}-{file_prefix}-{i+1}{extension}" if len(files) > 1 else f"{date}-{file_prefix}{extension}"
             remote_file = f"{ftp_directory}{file_name}"
 
             counter = 1
             while remote_file in existing_files:
-                remote_file = f"{ftp_directory}{original_name}-{counter}{extension}"
+                remote_file = f"{ftp_directory}{sanitize_file_name(original_name)}-{counter}{extension}"
                 counter += 1
 
             logger.debug(f"Uploading to: {remote_file}")
@@ -117,6 +117,10 @@ def upload():
                 logger.debug("FTP connection closed")
             except:
                 pass
+
+def sanitize_file_name(name):
+    """Sanitize file name to match client-side logic"""
+    return name.lower().replace('[^a-z0-9-_]', '').strip()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
