@@ -51,7 +51,7 @@
             MAX_FILES: 5,
             ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
         };
-
+    
         const state = { isUploading: false, abortController: null };
         const elements = {
             form: document.getElementById('uploadForm'),
@@ -70,22 +70,22 @@
             successPopup: document.getElementById('successPopup'),
             successMessage: document.getElementById('successMessage')
         };
-
+    
         function sanitizeFileName(name) {
             return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
         }
-
+    
         function showError(message) {
             elements.result.classList.add('error');
             elements.result.textContent = `Lỗi: ${message}`;
             elements.fileProgress.textContent = '';
         }
-
+    
         function clearError() {
             elements.result.classList.remove('error');
             elements.result.textContent = '';
         }
-
+    
         function updateUI(uploading) {
             state.isUploading = uploading;
             elements.uploadButton.disabled = uploading;
@@ -98,7 +98,7 @@
                 elements.progress.value = 0;
             }
         }
-
+    
         elements.reportType.addEventListener('change', () => {
             elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
             elements.customName.value = '';
@@ -106,20 +106,20 @@
                 elements.customName.focus();
             }
         });
-
+    
         elements.dropZone.addEventListener('click', () => {
             if (!state.isUploading) elements.fileInput.click();
         });
-
+    
         elements.dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             if (!state.isUploading) elements.dropZone.classList.add('dragover');
         });
-
+    
         elements.dropZone.addEventListener('dragleave', () => {
             elements.dropZone.classList.remove('dragover');
         });
-
+    
         elements.dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             elements.dropZone.classList.remove('dragover');
@@ -128,9 +128,9 @@
                 previewImages();
             }
         });
-
+    
         elements.fileInput.addEventListener('change', previewImages);
-
+    
         elements.cancelButton.addEventListener('click', () => {
             if (state.abortController) {
                 state.abortController.abort();
@@ -138,18 +138,18 @@
                 showError('Upload đã bị hủy');
             }
         });
-
+    
         function previewImages() {
             const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
             elements.previewContainer.innerHTML = '';
             clearError();
-
+    
             if (elements.fileInput.files.length > CONFIG.MAX_FILES) {
                 showError(`Chỉ được chọn tối đa ${CONFIG.MAX_FILES} ảnh!`);
                 elements.fileInput.value = '';
                 return;
             }
-
+    
             for (const file of files) {
                 if (!CONFIG.ALLOWED_TYPES.includes(file.type)) {
                     showError(`File ${file.name} không phải ảnh hợp lệ (chỉ chấp nhận JPEG, PNG, GIF)!`);
@@ -159,7 +159,7 @@
                     showError(`File ${file.name} vượt quá 10MB!`);
                     continue;
                 }
-
+    
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
                 img.className = 'preview';
@@ -168,11 +168,11 @@
                 elements.previewContainer.appendChild(img);
             }
         }
-
+    
         elements.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             clearError();
-
+    
             if (!elements.ftpAccount.value) {
                 showError('Vui lòng chọn tài khoản FTP!');
                 return;
@@ -186,37 +186,37 @@
                 elements.customName.focus();
                 return;
             }
-
+    
             const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
             if (files.length === 0) {
                 showError('Vui lòng chọn ít nhất một ảnh!');
                 return;
             }
-
+    
             updateUI(true);
             state.abortController = new AbortController();
             const formData = new FormData();
             formData.append('ftpAccount', elements.ftpAccount.value);
             formData.append('reportType', elements.reportType.value);
             formData.append('customName', sanitizeFileName(elements.customName.value));
-
+    
             for (const file of files) {
                 formData.append('images[]', file);
             }
-
+    
             try {
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData,
                     signal: state.abortController.signal
                 });
-
+    
                 if (!response.ok) {
                     const errorText = await response.text().catch(() => 'Lỗi server không xác định');
                     console.error('Fetch error:', response.status, errorText);
                     throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
                 }
-
+    
                 const json = await response.json();
                 if (json.success) {
                     showPopup(json.message);
@@ -239,13 +239,15 @@
                 state.abortController = null;
             }
         });
-
+    
         function showPopup(message) {
+            elements.successMessage.className = 'success-message';
             elements.successMessage.textContent = message;
-            elements.successPopup.style.display = 'block';
+            elements.successPopup.classList.add('active'); // Thêm class active để kích hoạt animation
         }
-
+    
         function closePopup() {
+            elements.successPopup.classList.remove('active'); // Xóa class active khi đóng
             elements.successPopup.style.display = 'none';
             elements.form.reset();
             elements.previewContainer.innerHTML = '';
