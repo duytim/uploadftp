@@ -7,7 +7,6 @@ import pytz
 
 app = Flask(__name__)
 
-# Thiết lập logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -18,9 +17,9 @@ FTP_ACCOUNTS = {
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 3MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 MAX_FILES = 5
-TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
+TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')
 
 @app.route('/')
 def index():
@@ -58,7 +57,7 @@ def upload():
         ftp_conn.login(ftp['username'], ftp['password'])
         ftp_conn.set_pasv(True)
 
-        date = datetime.now(TIMEZONE).strftime('%d.%m.%y')  # UTC+7
+        date = datetime.now(TIMEZONE).strftime('%d.%m.%y')
         ftp_directory = f"/KSQT/{date}/"
         logger.debug(f"Checking FTP directory: {ftp_directory}")
         try:
@@ -95,7 +94,6 @@ def upload():
             file_name = f"{date}-{file_prefix}{extension}" if len(files) == 1 else f"{date}-{file_prefix}-{i+1}{extension}"
             remote_file = file_name
 
-            # Xử lý trùng tên
             counter = 1
             base_name = f"{date}-{file_prefix}"
             while remote_file.lower() in existing_files:
