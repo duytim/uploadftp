@@ -37,16 +37,18 @@ select, input[type="text"], button {
     cursor: pointer;
     margin-bottom: 15px;
     background: #f8faff;
+    transition: transform 0.2s ease, background 0.3s ease; /* Thêm transition cho animation */
 }
 .drop-zone.dragover {
     background: #e1f0ff;
+    transform: scale(1.02); /* Phóng to nhẹ khi dragover */
 }
 button {
     background: #1a73e8;
     color: white;
     border: none;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s, transform 0.2s; /* Thêm transition cho animation */
 }
 button:disabled {
     background: #a0c1ff;
@@ -54,6 +56,8 @@ button:disabled {
 }
 button:hover:not(:disabled) {
     background: #1557b0;
+    transform: scale(1.05); /* Phóng to nhẹ khi hover */
+    animation: pulse 0.5s ease; /* Hiệu ứng pulse khi hover */
 }
 .preview-container {
     display: flex;
@@ -67,6 +71,8 @@ button:hover:not(:disabled) {
     object-fit: cover;
     border-radius: 4px;
     border: 1px solid #ddd;
+    opacity: 0; /* Ẩn ban đầu để fade-in */
+    animation: fadeIn 0.5s ease forwards; /* Hiệu ứng fade-in khi ảnh xuất hiện */
 }
 progress {
     width: 100%;
@@ -95,7 +101,7 @@ progress {
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0.7); /* Thu nhỏ ban đầu */
     background: #fff;
     padding: 20px;
     border-radius: 8px;
@@ -103,6 +109,14 @@ progress {
     text-align: center;
     z-index: 1000;
     max-width: 90%;
+    opacity: 0; /* Ẩn ban đầu để fade-in */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Transition cho animation */
+}
+.popup.active {
+    display: block;
+    transform: translate(-50%, -50%) scale(1); /* Phóng to khi xuất hiện */
+    opacity: 1; /* Hiện rõ */
+    animation: zoomIn 0.3s ease; /* Hiệu ứng zoom-in */
 }
 .popup h3 {
     margin-bottom: 10px;
@@ -113,6 +127,10 @@ progress {
 .popup button {
     padding: 8px 20px;
 }
+.success-message {
+    color: #d32f2f; /* Màu đỏ cho thông báo thành công */
+    font-weight: bold;
+}
 @media (max-width: 320px) {
     .container {
         padding: 10px;
@@ -120,5 +138,33 @@ progress {
     .preview {
         width: 60px;
         height: 60px;
+    }
+}
+
+/* Keyframes cho animations */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes zoomIn {
+    from {
+        transform: translate(-50%, -50%) scale(0.7);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
     }
 }
