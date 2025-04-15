@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 import logging
 import pytz
-import json
 
 app = Flask(__name__)
 
@@ -12,31 +11,17 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-# Hàm đọc cấu hình FTP
-def load_ftp_accounts():
-    try:
-        ftp_accounts = json.loads(os.getenv('FTP_ACCOUNTS', '{}'))
-        server = os.getenv('FTP_SERVER')
-        if not server or not ftp_accounts:
-            logger.error("Missing FTP_SERVER or FTP_ACCOUNTS")
-            raise ValueError("Cấu hình FTP không hợp lệ")
-        return {
-            key: {**account, 'server': server}
-            for key, account in ftp_accounts.items()
-        }
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid FTP_ACCOUNTS JSON: {str(e)}")
-        raise ValueError("Định dạng JSON của FTP_ACCOUNTS không hợp lệ")
-
-# Khởi tạo FTP_ACCOUNTS
-FTP_ACCOUNTS = load_ftp_accounts()
+FTP_ACCOUNTS = {
+    '1': {'server': '123.30.3.61', 'username': 'ksqtbacninh', 'password': 'ksqtvhc', 'description': 'BN_LTT - Bắc Ninh'},
+    '2': {'server': '123.30.3.61', 'username': 'ksqtsaidong', 'password': 'ksqtvhc', 'description': 'HN_NVL - Sài Đồng'},
+    '3': {'server': '123.30.3.61', 'username': 'ksqtlongbien', 'password': 'ksqtvhc', 'description': 'HN_NVC - Long Biên'}
+}
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 3MB
 MAX_FILES = 5
-TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')
+TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')  # UTC+7
 
-# Các route và logic còn lại giữ nguyên
 @app.route('/')
 def index():
     logger.debug("Serving index page")
@@ -73,7 +58,7 @@ def upload():
         ftp_conn.login(ftp['username'], ftp['password'])
         ftp_conn.set_pasv(True)
 
-        date = datetime.now(TIMEZONE).strftime('%d.%m.%y')
+        date = datetime.now(TIMEZONE).strftime('%d.%m.%y')  # UTC+7
         ftp_directory = f"/KSQT/{date}/"
         logger.debug(f"Checking FTP directory: {ftp_directory}")
         try:
@@ -83,6 +68,7 @@ def upload():
             ftp_conn.mkd(ftp_directory)
             ftp_conn.cwd(ftp_directory)
 
+        # Lấy danh sách file
         existing_files = set()
         try:
             existing_files = set(ftp_conn.nlst() or [])
@@ -109,6 +95,7 @@ def upload():
             file_name = f"{date}-{file_prefix}{extension}" if len(files) == 1 else f"{date}-{file_prefix}-{i+1}{extension}"
             remote_file = file_name
 
+            # Xử lý trùng tên
             counter = 1
             base_name = f"{date}-{file_prefix}"
             while remote_file.lower() in existing_files:
