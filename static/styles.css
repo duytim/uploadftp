@@ -3,52 +3,89 @@
     padding: 0;
     box-sizing: border-box;
 }
+:root {
+    --bg-color: #f0f2f5;
+    --container-bg: #fff;
+    --text-color: #333;
+    --primary-color: #1a73e8;
+    --error-color: #d32f2f;
+    --border-color: #ddd;
+}
+.dark-mode {
+    --bg-color: #333;
+    --container-bg: #444;
+    --text-color: #ddd;
+    --primary-color: #4a90e2;
+    --error-color: #ff6b6b;
+    --border-color: #555;
+}
 body {
     font-family: Arial, sans-serif;
-    background: #f0f2f5;
+    background: var(--bg-color);
     padding: 10px;
-    color: #333;
+    color: var(--text-color);
+}
+.menu {
+    text-align: center;
+    margin-bottom: 10px;
+}
+.menu button {
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 5px;
+    transition: background 0.3s, transform 0.2s;
+}
+.menu button:hover {
+    background: #1557b0;
+    transform: scale(1.05);
 }
 .container {
     max-width: 600px;
     margin: 0 auto;
-    background: #fff;
+    background: var(--container-bg);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 h2 {
     font-size: 20px;
     margin-bottom: 15px;
-    color: #1a73e8;
+    color: var(--primary-color);
 }
-select, input[type="text"], button {
+select, input[type="text"], input[type="date"], button {
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
+    background: var(--container-bg);
+    color: var(--text-color);
 }
 .drop-zone {
-    border: 2px dashed #1a73e8;
+    border: 2px dashed var(--primary-color);
     padding: 20px;
     text-align: center;
     cursor: pointer;
     margin-bottom: 15px;
-    background: #f8faff;
-    transition: transform 0.2s ease, background 0.3s ease; /* Thêm transition cho animation */
+    background: var(--container-bg);
+    transition: transform 0.2s ease, background 0.3s ease;
 }
 .drop-zone.dragover {
-    background: #e1f0ff;
-    transform: scale(1.02); /* Phóng to nhẹ khi dragover */
+    background: var(--primary-color);
+    opacity: 0.2;
+    transform: scale(1.02);
 }
 button {
-    background: #1a73e8;
+    background: var(--primary-color);
     color: white;
     border: none;
     cursor: pointer;
-    transition: background 0.3s, transform 0.2s; /* Thêm transition cho animation */
+    transition: background 0.3s, transform 0.2s;
 }
 button:disabled {
     background: #a0c1ff;
@@ -56,8 +93,8 @@ button:disabled {
 }
 button:hover:not(:disabled) {
     background: #1557b0;
-    transform: scale(1.05); /* Phóng to nhẹ khi hover */
-    animation: pulse 0.5s ease; /* Hiệu ứng pulse khi hover */
+    transform: scale(1.05);
+    animation: pulse 0.5s ease;
 }
 .preview-container {
     display: flex;
@@ -65,61 +102,60 @@ button:hover:not(:disabled) {
     gap: 10px;
     margin-bottom: 15px;
 }
+.preview-item {
+    position: relative;
+    display: inline-block;
+}
 .preview {
     width: 80px;
     height: 80px;
     object-fit: cover;
     border-radius: 4px;
-    border: 1px solid #ddd;
-    opacity: 0; /* Ẩn ban đầu để fade-in */
-    animation: fadeIn 0.5s ease forwards; /* Hiệu ứng fade-in khi ảnh xuất hiện */
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+    transition: width 0.3s ease, height 0.3s ease;
 }
-progress {
-    width: 100%;
+.preview.zoomed {
+    width: 200px;
+    height: 200px;
+}
+.remove-preview {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
     height: 20px;
-}
-#progress-info {
-    font-size: 14px;
-    margin: 10px 0;
-    color: #555;
-}
-#file-progress {
-    font-size: 14px;
-    margin: 10px 0;
-    color: #28a745;
-    white-space: pre-line;
-}
-#result {
-    font-size: 14px;
-    margin: 10px 0;
-}
-#result.error {
-    color: #d32f2f;
-}
-.popup {
+    cursor:.popup {
     display: none;
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.7); /* Thu nhỏ ban đầu */
-    background: #fff;
+    transform: translate(-50%, -50%) scale(0.7);
+    background: var(--container-bg);
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     text-align: center;
     z-index: 1000;
     max-width: 90%;
-    opacity: 0; /* Ẩn ban đầu để fade-in */
-    transition: transform 0.3s ease, opacity 0.3s ease; /* Transition cho animation */
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 .popup.active {
     display: block;
-    transform: translate(-50%, -50%) scale(1); /* Phóng to khi xuất hiện */
-    opacity: 1; /* Hiện rõ */
-    animation: zoomIn 0.3s ease; /* Hiệu ứng zoom-in */
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    animation: zoomIn 0.3s ease;
 }
 .popup h3 {
     margin-bottom: 10px;
+    color: var(--text-color);
 }
 .popup p {
     margin-bottom: 15px;
@@ -128,8 +164,29 @@ progress {
     padding: 8px 20px;
 }
 .success-message {
-    color: #d32f2f; /* Màu đỏ cho thông báo thành công */
+    color: var(--error-color);
     font-weight: bold;
+}
+#historyPopup input, #historyPopup button {
+    margin: 10px 0;
+}
+#historyPopup table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+#historyPopup th, #historyPopup td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    text-align: left;
+}
+#historyPopup th {
+    background: var(--primary-color);
+    color: white;
+}
+#historyPopup .error {
+    color: var(--error-color);
+    font-size: 14px;
 }
 @media (max-width: 320px) {
     .container {
@@ -138,6 +195,10 @@ progress {
     .preview {
         width: 60px;
         height: 60px;
+    }
+    .preview.zoomed {
+        width: 150px;
+        height: 150px;
     }
 }
 
