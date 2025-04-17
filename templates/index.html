@@ -281,6 +281,7 @@
     
         function closePopup() {
             elements.successPopup.classList.remove('active');
+            elements.successPopup.style.display = 'none';
             elements.form.reset();
             elements.previewContainer.innerHTML = '';
             clearError();
@@ -308,7 +309,7 @@
             }
     
             try {
-                const formData =acteria
+                const formData = new FormData();
                 formData.append('ftpAccount', ftpAccount);
                 formData.append('date', date);
                 const response = await fetch('/list_files_by_date', {
@@ -348,6 +349,7 @@
     
         function closeHistoryPopup() {
             document.getElementById('historyPopup').classList.remove('active');
+            document.getElementById('historyPopup').style.display = 'none';
             document.getElementById('historyTable').innerHTML = '';
             document.getElementById('historyDate').value = '';
         }
