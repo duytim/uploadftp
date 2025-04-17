@@ -130,5 +130,52 @@ def upload():
             except:
                 pass
 
+@app.route('/list_files_by_date', methods=['POST'])
+def list_files_by_date():
+    ftp_conn = None
+    try:
+        ftp_account_id = request.form.get('ftpAccount')
+        date = request.form.get('date')  # Định dạng: YYYY-MM-DD
+        if not ftp_account_id or ftp_account_id not in FTP_ACCOUNTS:
+            return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
+        if not date:
+            return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
+
+        ftp = FTP_ACCOUNTS[ftp_account_id]
+        ftp_conn = ftplib.FTP()
+        ftp_conn.connect(ftp['server'], timeout=60)
+        ftp_conn.login(ftp['username'], ftp['password'])
+        ftp_conn.set_pasv(True)
+
+        # Chuyển định dạng ngày thành dd.mm.yy
+        try:
+            selected_date = datetime.strptime(date, '%Y-%m-%d')
+            ftp_date = selected_date.strftime('%d.%m.%y')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ!'}), 400
+
+        ftp_directory = f"/KSQT/{ftp_date}/"
+        logger.debug(f"Checking FTP directory: {ftp_directory}")
+        try:
+            ftp_conn.cwd(ftp_directory)
+        except ftplib.all_errors:
+            return jsonify({'success': False, 'message': f'Thư mục cho ngày {ftp_date} không tồn tại!'}), 404
+
+        files = ftp_conn.nlst() or []
+        if not files:
+            return jsonify({'success': False, 'message': f'Thư mục cho ngày {ftp_date} trống!'}), 200
+
+        return jsonify({'success': True, 'files': files})
+    except ftplib.all_errors as e:
+        logger.error(f"FTP error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Lỗi kết nối FTP: {str(e)}'}), 500
+    finally:
+        if ftp_conn:
+            try:
+                ftp_conn.quit()
+                logger.debug("FTP connection closed")
+            except:
+                pass
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
