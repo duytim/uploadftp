@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <div class="menu">
+        <button id="historyMenu">Lịch sử</button>
+        <button id="themeToggle">Dark Mode</button>
+    </div>
     <div class="container">
         <h2>Upload Ảnh Báo Cáo</h2>
         <form id="uploadForm" enctype="multipart/form-data" aria-label="Form upload ảnh">
@@ -43,6 +47,13 @@
         <h3 id="successPopupTitle">Upload Thành Công!</h3>
         <p id="successMessage"></p>
         <button onclick="closePopup()">OK</button>
+    </div>
+    <div class="popup" id="historyPopup" role="dialog" aria-labelledby="historyPopupTitle">
+        <h3 id="historyPopupTitle">Lịch sử file đã upload</h3>
+        <input type="date" id="historyDate" aria-label="Chọn ngày">
+        <button id="fetchHistory">Tìm kiếm</button>
+        <div id="historyTable"></div>
+        <button onclick="closeHistoryPopup()">Đóng</button>
     </div>
 
     <script>
@@ -150,6 +161,7 @@
                 return;
             }
     
+            const fileList = new DataTransfer();
             for (const file of files) {
                 if (!CONFIG.ALLOWED_TYPES.includes(file.type)) {
                     showError(`File ${file.name} không phải ảnh hợp lệ (chỉ chấp nhận JPEG, PNG, GIF)!`);
@@ -160,13 +172,33 @@
                     continue;
                 }
     
+                const container = document.createElement('div');
+                container.className = 'preview-item';
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
                 img.className = 'preview';
                 img.alt = `Xem trước ${file.name}`;
                 img.onerror = () => showError(`Không thể hiển thị ảnh ${file.name}`);
-                elements.previewContainer.appendChild(img);
+                img.onclick = () => {
+                    img.classList.toggle('zoomed');
+                };
+    
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = 'X';
+                removeBtn.className = 'remove-preview';
+                removeBtn.onclick = () => {
+                    container.remove();
+                    const newFiles = Array.from(elements.fileInput.files).filter(f => f !== file);
+                    newFiles.forEach(f => fileList.items.add(f));
+                    elements.fileInput.files = fileList.files;
+                };
+    
+                container.appendChild(img);
+                container.appendChild(removeBtn);
+                elements.previewContainer.appendChild(container);
+                fileList.items.add(file);
             }
+            elements.fileInput.files = fileList.files;
         }
     
         elements.form.addEventListener('submit', async (e) => {
@@ -243,12 +275,12 @@
         function showPopup(message) {
             elements.successMessage.className = 'success-message';
             elements.successMessage.textContent = message;
-            elements.successPopup.classList.add('active'); // Thêm class active để kích hoạt animation
+            elements.successPopup.style.display = 'block';
+            elements.successPopup.classList.add('active');
         }
     
         function closePopup() {
-            elements.successPopup.classList.remove('active'); // Xóa class active khi đóng
-            elements.successPopup.style.display = 'none';
+            elements.successPopup.classList.remove('active');
             elements.form.reset();
             elements.previewContainer.innerHTML = '';
             clearError();
@@ -259,6 +291,87 @@
             elements.ftpAccount.value = '';
             elements.reportType.value = '';
         }
+    
+        // Lịch sử file
+        async function displayHistoryByDate() {
+            const date = document.getElementById('historyDate').value;
+            const ftpAccount = elements.ftpAccount.value;
+            const historyTable = document.getElementById('historyTable');
+    
+            if (!ftpAccount) {
+                historyTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
+                return;
+            }
+            if (!date) {
+                historyTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
+                return;
+            }
+    
+            try {
+                const formData =acteria
+                formData.append('ftpAccount', ftpAccount);
+                formData.append('date', date);
+                const response = await fetch('/list_files_by_date', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await response.json();
+                if (json.success) {
+                    historyTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tên file</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${json.files.map(file => `
+                                    <tr>
+                                        <td>${file}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    historyTable.innerHTML = `<p class="error">${json.message}</p>`;
+                }
+            } catch (error) {
+                historyTable.innerHTML = `<p class="error">Lỗi khi tải danh sách file: ${error.message}</p>`;
+            }
+        }
+    
+        function openHistoryPopup() {
+            document.getElementById('historyPopup').classList.add('active');
+            document.getElementById('historyPopup').style.display = 'block';
+        }
+    
+        function closeHistoryPopup() {
+            document.getElementById('historyPopup').classList.remove('active');
+            document.getElementById('historyTable').innerHTML = '';
+            document.getElementById('historyDate').value = '';
+        }
+    
+        // Dark Mode
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeToggle').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        }
+    
+        // Áp dụng theme khi tải trang
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('themeToggle').textContent = 'Light Mode';
+        }
+    
+        // Sự kiện
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
+            document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        });
     </script>
 </body>
 </html>
