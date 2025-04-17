@@ -26,8 +26,11 @@ body {
     color: var(--text-color);
 }
 .menu {
-    text-align: center;
-    margin-bottom: 10px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 10px;
 }
 .menu button {
     background: var(--primary-color);
@@ -36,7 +39,6 @@ body {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    margin: 0 5px;
     transition: background 0.3s, transform 0.2s;
 }
 .menu button:hover {
@@ -45,7 +47,7 @@ body {
 }
 .container {
     max-width: 600px;
-    margin: 0 auto;
+    margin: 40px auto 0;
     background: var(--container-bg);
     border-radius: 8px;
     padding: 20px;
@@ -131,7 +133,9 @@ button:hover:not(:disabled) {
     border-radius: 50%;
     width: 20px;
     height: 20px;
-    cursor:.popup {
+    cursor: pointer;
+}
+.popup {
     display: none;
     position: fixed;
     top: 50%;
@@ -164,7 +168,7 @@ button:hover:not(:disabled) {
     padding: 8px 20px;
 }
 .success-message {
-    color: var(--error-color);
+    color: #28a745; /* Green for success */
     font-weight: bold;
 }
 #historyPopup input, #historyPopup button {
