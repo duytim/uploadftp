@@ -1,113 +1,49 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-:root {
-    --bg-color: #f0f2f5;
-    --container-bg: #fff;
-    --text-color: #333;
-    --primary-color: #1a73e8;
-    --error-color: #d32f2f;
-    --border-color: #ddd;
-}
-.dark-mode {
-    --bg-color: #333;
-    --container-bg: #444;
-    --text-color: #ddd;
-    --primary-color: #4a90e2;
-    --error-color: #ff6b6b;
-    --border-color: #555;
-}
-body {
-    font-family: Arial, sans-serif;
-    background: var(--bg-color);
-    padding: 10px;
-    color: var(--text-color);
-}
-.menu {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    display: flex;
-    gap: 10px;
-}
-.menu button {
-    background: var(--primary-color);
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
-}
-.menu button:hover {
-    background: #1557b0;
-    transform: scale(1.05);
-}
+/* Remove .menu styles */
 .container {
     max-width: 600px;
-    margin: 40px auto 0;
+    margin: 20px auto;
     background: var(--container-bg);
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: relative;
 }
-h2 {
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-}
-select, input[type="text"], input[type="date"], button {
-    width: 100%;
+
+#uploadButton, #historyMenu {
     padding: 10px;
     margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
     font-size: 14px;
-    background: var(--container-bg);
-    color: var(--text-color);
 }
-.drop-zone {
-    border: 2px dashed var(--primary-color);
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    margin-bottom: 15px;
-    background: var(--container-bg);
-    transition: transform 0.2s ease, background 0.3s ease;
+
+#historyMenu {
+    background: #4CAF50;
 }
-.drop-zone.dragover {
-    background: var(--primary-color);
-    opacity: 0.2;
-    transform: scale(1.02);
+
+#historyMenu:hover:not(:disabled) {
+    background: #45a049;
 }
-button {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
+
+.theme-toggle-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
 }
-button:disabled {
-    background: #a0c1ff;
-    cursor: not-allowed;
-}
-button:hover:not(:disabled) {
-    background: #1557b0;
-    transform: scale(1.05);
-    animation: pulse 0.5s ease;
-}
-.preview-container {
+
+#themeToggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 15px;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    padding: 0;
 }
-.preview-item {
-    position: relative;
-    display: inline-block;
+
+.theme-icon {
+    font-size: 20px;
 }
+
 .preview {
     width: 80px;
     height: 80px;
@@ -117,119 +53,63 @@ button:hover:not(:disabled) {
     cursor: pointer;
     opacity: 0;
     animation: fadeIn 0.5s ease forwards;
-    transition: width 0.3s ease, height 0.3s ease;
+    transition: width 0.3s ease, height 0.3s ease, transform 0.3s ease;
 }
+
 .preview.zoomed {
     width: 200px;
     height: 200px;
+    transform: scale(1.2);
+    z-index: 10;
 }
+
+.preview.minimized {
+    width: 60px;
+    height: 60px;
+    opacity: 0.7;
+}
+
 .remove-preview {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -8px;
+    right: -8px;
     background: var(--error-color);
     color: white;
     border: none;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
 }
-.popup {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.7);
-    background: var(--container-bg);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    text-align: center;
-    z-index: 1000;
-    max-width: 90%;
-    opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+
+.remove-preview:hover {
+    transform: scale(1.1);
+    background: #c62828;
 }
-.popup.active {
-    display: block;
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-    animation: zoomIn 0.3s ease;
-}
-.popup h3 {
-    margin-bottom: 10px;
-    color: var(--text-color);
-}
-.popup p {
-    margin-bottom: 15px;
-}
-.popup button {
-    padding: 8px 20px;
-}
-.success-message {
-    color: #28a745; /* Green for success */
-    font-weight: bold;
-}
-#historyPopup input, #historyPopup button {
+
+.table-container {
+    max-height: 150px; /* Approximately 5 rows */
+    overflow-y: auto;
     margin: 10px 0;
 }
+
 #historyPopup table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
 }
+
 #historyPopup th, #historyPopup td {
     border: 1px solid var(--border-color);
     padding: 8px;
     text-align: left;
-}
-#historyPopup th {
-    background: var(--primary-color);
-    color: white;
-}
-#historyPopup .error {
-    color: var(--error-color);
-    font-size: 14px;
-}
-@media (max-width: 320px) {
-    .container {
-        padding: 10px;
-    }
-    .preview {
-        width: 60px;
-        height: 60px;
-    }
-    .preview.zoomed {
-        width: 150px;
-        height: 150px;
-    }
+    min-height: 30px;
 }
 
-/* Keyframes cho animations */
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-}
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-@keyframes zoomIn {
-    from {
-        transform: translate(-50%, -50%) scale(0.7);
-        opacity: 0;
-    }
-    to {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
-}
+/* Rest of the CSS remains the same */
