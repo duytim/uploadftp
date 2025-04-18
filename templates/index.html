@@ -60,9 +60,10 @@
         </select>
         <input type="date" id="historyDate" aria-label="Chọn ngày">
         <button id="fetchHistory">Tìm kiếm</button>
-        <div id="historyTable"></div>
+        <div id="historyTable" class="table-container"></div>
         <button onclick="closeHistoryPopup()">Đóng</button>
     </div>
+    <div id="toastContainer" class="toast-container"></div>
 
     <script>
         const CONFIG = {
@@ -90,18 +91,31 @@
             successMessage: document.getElementById('successMessage')
         };
 
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }, 100);
+        }
+
         function sanitizeFileName(name) {
             return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
         }
 
         function showError(message) {
-            elements.result.classList.add('error');
-            elements.result.textContent = `Lỗi: ${message}`;
+            showToast(`Lỗi: ${message}`, 'error');
             elements.fileProgress.textContent = '';
         }
 
         function clearError() {
-            elements.result.classList.remove('error');
             elements.result.textContent = '';
         }
 
@@ -116,7 +130,22 @@
                 elements.fileProgress.textContent = '';
                 elements.progress.value = 0;
             }
+            elements.uploadButton.classList.toggle('loading', uploading);
         }
+
+        // Lưu và khôi phục tài khoản FTP
+        function saveFtpAccount() {
+            localStorage.setItem('selectedFtpAccount', elements.ftpAccount.value);
+        }
+
+        function restoreFtpAccount() {
+            const savedFtp = localStorage.getItem('selectedFtpAccount');
+            if (savedFtp && elements.ftpAccount.querySelector(`option[value="${savedFtp}"]`)) {
+                elements.ftpAccount.value = savedFtp;
+            }
+        }
+
+        elements.ftpAccount.addEventListener('change', saveFtpAccount);
 
         elements.reportType.addEventListener('change', () => {
             elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
@@ -271,6 +300,7 @@
                 const json = await response.json();
                 if (json.success) {
                     showPopup(json.message);
+                    showToast(json.message, 'success');
                     if (json.files) {
                         json.files.forEach(file => {
                             elements.fileProgress.textContent += `Đã upload: ${file}\n`;
@@ -310,19 +340,25 @@
             elements.fileProgress.textContent = '';
             elements.ftpAccount.value = '';
             elements.reportType.value = '';
+            saveFtpAccount();
         }
 
         async function displayHistoryByDate() {
             const date = document.getElementById('historyDate').value;
             const ftpAccount = document.getElementById('ftpAccountHistory').value;
             const historyTable = document.getElementById('historyTable');
+            historyTable.classList.add('loading');
 
             if (!ftpAccount) {
                 historyTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
+                historyTable.classList.remove('loading');
+                showToast('Vui lòng chọn tài khoản FTP!', 'error');
                 return;
             }
             if (!date) {
                 historyTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
+                historyTable.classList.remove('loading');
+                showToast('Vui lòng chọn ngày!', 'error');
                 return;
             }
 
@@ -336,29 +372,37 @@
                 });
                 const json = await response.json();
                 if (json.success) {
+                    const fakeTime = new Date().toLocaleTimeString('vi-VN'); // Giả lập thời gian
                     historyTable.innerHTML = `
-                        <div class="table-container">
-                            <table>
-                                <thead>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tên file</th>
+                                    <th>Thời gian</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${json.files.map(file => `
                                     <tr>
-                                        <th>Tên file</th>
+                                        <td>${file}</td>
+                                        <td>${fakeTime}</td>
+                                        <td><button class="action-preview" onclick="alert('Tính năng xem trước đang phát triển!')">Xem trước</button></td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    ${json.files.map(file => `
-                                        <tr>
-                                            <td>${file}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     `;
+                    showToast('Tải lịch sử thành công!', 'success');
                 } else {
                     historyTable.innerHTML = `<p class="error">${json.message}</p>`;
+                    showToast(json.message, 'error');
                 }
             } catch (error) {
                 historyTable.innerHTML = `<p class="error">Lỗi khi tải danh sách file: ${error.message}</p>`;
+                showToast(`Lỗi: ${error.message}`, 'error');
+            } finally {
+                historyTable.classList.remove('loading');
             }
         }
 
@@ -382,12 +426,12 @@
             document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
         }
 
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-mode');
-            document.querySelector('.theme-icon').textContent = '☀️';
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
+            restoreFtpAccount();
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.querySelector('.theme-icon').textContent = '☀️';
+            }
             document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
             document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);
             document.getElementById('themeToggle').addEventListener('click', toggleTheme);
