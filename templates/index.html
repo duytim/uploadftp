@@ -64,22 +64,111 @@
         <button onclick="closeHistoryPopup()">Đóng</button>
     </div>
 
-    <!-- Rest of the JavaScript remains the same with these modifications -->
     <script>
-        // ... Previous JavaScript code ...
-        
-        // Modified previewImages function
+        const CONFIG = {
+            MAX_FILE_SIZE: 10 * 1024 * 1024,
+            MAX_FILES: 5,
+            ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
+        };
+
+        const state = { isUploading: false, abortController: null };
+        const elements = {
+            form: document.getElementById('uploadForm'),
+            ftpAccount: document.getElementById('ftpAccount'),
+            reportType: document.getElementById('reportType'),
+            customName: document.getElementById('customName'),
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('images'),
+            previewContainer: document.getElementById('previewContainer'),
+            uploadButton: document.getElementById('uploadButton'),
+            cancelButton: document.getElementById('cancelButton'),
+            progress: document.getElementById('progress'),
+            progressInfo: document.getElementById('progress-info'),
+            fileProgress: document.getElementById('file-progress'),
+            result: document.getElementById('result'),
+            successPopup: document.getElementById('successPopup'),
+            successMessage: document.getElementById('successMessage')
+        };
+
+        function sanitizeFileName(name) {
+            return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
+        }
+
+        function showError(message) {
+            elements.result.classList.add('error');
+            elements.result.textContent = `Lỗi: ${message}`;
+            elements.fileProgress.textContent = '';
+        }
+
+        function clearError() {
+            elements.result.classList.remove('error');
+            elements.result.textContent = '';
+        }
+
+        function updateUI(uploading) {
+            state.isUploading = uploading;
+            elements.uploadButton.disabled = uploading;
+            elements.uploadButton.textContent = uploading ? 'Đang upload...' : 'Upload';
+            elements.cancelButton.style.display = uploading ? 'inline-block' : 'none';
+            elements.progress.style.display = uploading ? 'block' : 'none';
+            elements.progressInfo.textContent = uploading ? 'Đang xử lý...' : '';
+            if (!uploading) {
+                elements.fileProgress.textContent = '';
+                elements.progress.value = 0;
+            }
+        }
+
+        elements.reportType.addEventListener('change', () => {
+            elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
+            elements.customName.value = '';
+            if (elements.customName.style.display === 'block') {
+                elements.customName.focus();
+            }
+        });
+
+        elements.dropZone.addEventListener('click', () => {
+            if (!state.isUploading) elements.fileInput.click();
+        });
+
+        elements.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!state.isUploading) elements.dropZone.classList.add('dragover');
+        });
+
+        elements.dropZone.addEventListener('dragleave', () => {
+            elements.dropZone.classList.remove('dragover');
+        });
+
+        elements.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('dragover');
+            if (!state.isUploading) {
+                elements.fileInput.files = e.dataTransfer.files;
+                previewImages();
+            }
+        });
+
+        elements.fileInput.addEventListener('change', previewImages);
+
+        elements.cancelButton.addEventListener('click', () => {
+            if (state.abortController) {
+                state.abortController.abort();
+                updateUI(false);
+                showError('Upload đã bị hủy');
+            }
+        });
+
         function previewImages() {
             const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
             elements.previewContainer.innerHTML = '';
             clearError();
-    
+
             if (elements.fileInput.files.length > CONFIG.MAX_FILES) {
                 showError(`Chỉ được chọn tối đa ${CONFIG.MAX_FILES} ảnh!`);
                 elements.fileInput.value = '';
                 return;
             }
-    
+
             const fileList = new DataTransfer();
             for (const file of files) {
                 if (!CONFIG.ALLOWED_TYPES.includes(file.type)) {
@@ -90,7 +179,7 @@
                     showError(`File ${file.name} vượt quá 10MB!`);
                     continue;
                 }
-    
+
                 const container = document.createElement('div');
                 container.className = 'preview-item';
                 const img = document.createElement('img');
@@ -99,7 +188,6 @@
                 img.alt = `Xem trước ${file.name}`;
                 img.onerror = () => showError(`Không thể hiển thị ảnh ${file.name}`);
                 img.onclick = () => {
-                    // Remove zoomed class from all other images
                     document.querySelectorAll('.preview.zoomed').forEach(otherImg => {
                         if (otherImg !== img) {
                             otherImg.classList.remove('zoomed');
@@ -113,9 +201,9 @@
                         });
                     }
                 };
-    
+
                 const removeBtn = document.createElement('button');
-                removeBtn.innerHTML = '&times;';
+                removeBtn.innerHTML = '×';
                 removeBtn.className = 'remove-preview';
                 removeBtn.onclick = () => {
                     container.remove();
@@ -123,7 +211,7 @@
                     newFiles.forEach(f => fileList.items.add(f));
                     elements.fileInput.files = fileList.files;
                 };
-    
+
                 container.appendChild(img);
                 container.appendChild(removeBtn);
                 elements.previewContainer.appendChild(container);
@@ -132,12 +220,103 @@
             elements.fileInput.files = fileList.files;
         }
 
-        // Modified displayHistoryByDate function
+        elements.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
+
+            if (!elements.ftpAccount.value) {
+                showError('Vui lòng chọn tài khoản FTP!');
+                return;
+            }
+            if (!elements.reportType.value) {
+                showError('Vui lòng chọn loại báo cáo!');
+                return;
+            }
+            if (elements.reportType.value === 'Custom' && !elements.customName.value.trim()) {
+                showError('Vui lòng nhập tên file cho báo cáo tùy chỉnh!');
+                elements.customName.focus();
+                return;
+            }
+
+            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+            if (files.length === 0) {
+                showError('Vui lòng chọn ít nhất một ảnh!');
+                return;
+            }
+
+            updateUI(true);
+            state.abortController = new AbortController();
+            const formData = new FormData();
+            formData.append('ftpAccount', elements.ftpAccount.value);
+            formData.append('reportType', elements.reportType.value);
+            formData.append('customName', sanitizeFileName(elements.customName.value));
+
+            for (const file of files) {
+                formData.append('images[]', file);
+            }
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: state.abortController.signal
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Lỗi server không xác định');
+                    console.error('Fetch error:', response.status, errorText);
+                    throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
+                }
+
+                const json = await response.json();
+                if (json.success) {
+                    showPopup(json.message);
+                    if (json.files) {
+                        json.files.forEach(file => {
+                            elements.fileProgress.textContent += `Đã upload: ${file}\n`;
+                        });
+                    }
+                    elements.progress.value = 100;
+                    elements.progressInfo.textContent = 'Hoàn tất!';
+                } else {
+                    showError(json.message);
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showError(error.message);
+                }
+            } finally {
+                updateUI(false);
+                state.abortController = null;
+            }
+        });
+
+        function showPopup(message) {
+            elements.successMessage.className = 'success-message';
+            elements.successMessage.textContent = message;
+            elements.successPopup.style.display = 'block';
+            elements.successPopup.classList.add('active');
+        }
+
+        function closePopup() {
+            elements.successPopup.classList.remove('active');
+            elements.successPopup.style.display = 'none';
+            elements.form.reset();
+            elements.previewContainer.innerHTML = '';
+            clearError();
+            elements.customName.style.display = 'none';
+            elements.progress.style.display = 'none';
+            elements.progressInfo.textContent = '';
+            elements.fileProgress.textContent = '';
+            elements.ftpAccount.value = '';
+            elements.reportType.value = '';
+        }
+
         async function displayHistoryByDate() {
             const date = document.getElementById('historyDate').value;
             const ftpAccount = document.getElementById('ftpAccountHistory').value;
             const historyTable = document.getElementById('historyTable');
-    
+
             if (!ftpAccount) {
                 historyTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
                 return;
@@ -146,7 +325,7 @@
                 historyTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
                 return;
             }
-    
+
             try {
                 const formData = new FormData();
                 formData.append('ftpAccount', ftpAccount);
@@ -183,7 +362,19 @@
             }
         }
 
-        // Modified toggleTheme function
+        function openHistoryPopup() {
+            document.getElementById('historyPopup').classList.add('active');
+            document.getElementById('historyPopup').style.display = 'block';
+        }
+
+        function closeHistoryPopup() {
+            document.getElementById('historyPopup').classList.remove('active');
+            document.getElementById('historyPopup').style.display = 'none';
+            document.getElementById('historyTable').innerHTML = '';
+            document.getElementById('historyDate').value = '';
+            document.getElementById('ftpAccountHistory').value = '';
+        }
+
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
@@ -191,7 +382,16 @@
             document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
         }
 
-        // Rest of the JavaScript code remains the same
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.theme-icon').textContent = '☀️';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
+            document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        });
     </script>
 </body>
 </html>
