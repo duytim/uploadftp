@@ -11,6 +11,8 @@
     --primary-color: #1a73e8;
     --error-color: #d32f2f;
     --border-color: #ddd;
+    --success-color: #28a745;
+    --warning-color: #f1c40f;
 }
 
 .dark-mode {
@@ -20,6 +22,8 @@
     --primary-color: #4a90e2;
     --error-color: #ff6b6b;
     --border-color: #555;
+    --success-color: #2ecc71;
+    --warning-color: #f4d03f;
 }
 
 body {
@@ -78,6 +82,7 @@ button {
     border: none;
     cursor: pointer;
     transition: background 0.3s, transform 0.2s;
+    position: relative;
 }
 
 button:disabled {
@@ -89,6 +94,20 @@ button:hover:not(:disabled) {
     background: #1557b0;
     transform: scale(1.05);
     animation: pulse 0.5s ease;
+}
+
+button.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
 }
 
 #uploadButton, #historyMenu {
@@ -147,7 +166,8 @@ button:hover:not(:disabled) {
     cursor: pointer;
     opacity: 0;
     animation: fadeIn 0.5s ease forwards;
-    transition: width 0.3s ease, height 0.3s ease, transform 0.3s ease;
+    transition: width 0.3s ease, height 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+    will-change: width, height, transform, opacity;
 }
 
 .preview.zoomed {
@@ -225,7 +245,7 @@ button:hover:not(:disabled) {
 }
 
 .success-message {
-    color: #28a745;
+    color: var(--success-color);
     font-weight: bold;
 }
 
@@ -237,317 +257,24 @@ button:hover:not(:disabled) {
     max-height: 150px;
     overflow-y: auto;
     margin: 10px 0;
-}
-
-#historyPopup table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-#historyPopup th, #historyPopup td {
-    border: 1px solid var(--border-color);
-    padding: 8px;
-    text-align: left;
-    min-height: 30px;
-}
-
-#historyPopup th {
-    background: var(--primary-color);
-    color: white;
-}
-
-#historyPopup .error {
-    color: var(--error-color);
-    font-size: 14px;
-}
-
-@media (max-width: 320px) {
-    .container {
-        padding: 10px;
-    }
-    .preview {
-        width: 60px;
-        height: 60px;
-    }
-    .preview.zoomed {
-        width: 150px;
-        height: 150px;
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes zoomIn {
-    from {
-        transform: translate(-50%, -50%) scale(0.7);
-        opacity: 0;
-    }
-    to {
-        transform: translate(-50%, -50%) scale(1);
-       Many apologies, I noticed I cut off the end of the styles.css file. Here's the complete version:
-
----
-
-### **styles.css** (Complete)
-```css
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:root {
-    --bg-color: #f0f2f5;
-    --container-bg: #fff;
-    --text-color: #333;
-    --primary-color: #1a73e8;
-    --error-color: #d32f2f;
-    --border-color: #ddd;
-}
-
-.dark-mode {
-    --bg-color: #333;
-    --container-bg: #444;
-    --text-color: #ddd;
-    --primary-color: #4a90e2;
-    --error-color: #ff6b6b;
-    --border-color: #555;
-}
-
-body {
-    font-family: Arial, sans-serif;
-    background: var(--bg-color);
-    padding: 10px;
-    color: var(--text-color);
-}
-
-.container {
-    max-width: 600px;
-    margin: 20px auto;
-    background: var(--container-bg);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     position: relative;
 }
 
-h2 {
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-}
-
-select, input[type="text"], input[type="date"], button {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 14px;
-    background: var(--container-bg);
-    color: var(--text-color);
-}
-
-.drop-zone {
-    border: 2px dashed var(--primary-color);
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    margin-bottom: 15px;
-    background: var(--container-bg);
-    transition: transform 0.2s ease, background 0.3s ease;
-}
-
-.drop-zone.dragover {
-    background: var(--primary-color);
-    opacity: 0.2;
-    transform: scale(1.02);
-}
-
-button {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
-}
-
-button:disabled {
-    background: #a0c1ff;
-    cursor: not-allowed;
-}
-
-button:hover:not(:disabled) {
-    background: #1557b0;
-    transform: scale(1.05);
-    animation: pulse 0.5s ease;
-}
-
-#uploadButton, #historyMenu {
-    padding: 10px;
-    margin-bottom: 15px;
-    font-size: 14px;
-}
-
-#historyMenu {
-    background: #4CAF50;
-}
-
-#historyMenu:hover:not(:disabled) {
-    background: #45a049;
-}
-
-.theme-toggle-container {
+.table-container.loading::before {
+    content: '';
     position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-#themeToggle {
-    width: 40px;
-    height: 40px;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--primary-color);
+    border-top: 3px solid transparent;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--primary-color);
-    padding: 0;
-}
-
-.theme-icon {
-    font-size: 20px;
-}
-
-.preview-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.preview-item {
-    position: relative;
-    display: inline-block;
-}
-
-.preview {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    cursor: pointer;
-    opacity: 0;
-    animation: fadeIn 0.5s ease forwards;
-    transition: width 0.3s ease, height 0.3s ease, transform 0.3s ease;
-}
-
-.preview.zoomed {
-    width: 200px;
-    height: 200px;
-    transform: scale(1.2);
+    animation: spin 0.8s linear infinite;
+    transform: translate(-50%, -50%);
     z-index: 10;
 }
 
-.preview.minimized {
-    width: 60px;
-    height: 60px;
-    opacity: 0.7;
-}
-
-.remove-preview {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: var(--error-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease;
-}
-
-.remove-preview:hover {
-    transform: scale(1.1);
-    background: #c62828;
-}
-
-.popup {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.7);
-    background: var(--container-bg);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    text-align: center;
-    z-index: 1000;
-    max-width: 90%;
-    opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.popup.active {
-    display: block;
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-    animation: zoomIn 0.3s ease;
-}
-
-.popup h3 {
-    margin-bottom: 10px;
-    color: var(--text-color);
-}
-
-.popup p {
-    margin-bottom: 15px;
-}
-
-.popup button {
-    padding: 8px 20px;
-}
-
-.success-message {
-    color: #28a745;
-    font-weight: bold;
-}
-
-#historyPopup select, #historyPopup input, #historyPopup button {
-    margin: 10px 0;
-}
-
-.table-container {
-    max-height: 150px;
-    overflow-y: auto;
-    margin: 10px 0;
-}
-
 #historyPopup table {
     width: 100%;
     border-collapse: collapse;
@@ -564,6 +291,9 @@ button:hover:not(:disabled) {
 #historyPopup th {
     background: var(--primary-color);
     color: white;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 }
 
 #historyPopup .error {
@@ -571,7 +301,72 @@ button:hover:not(:disabled) {
     font-size: 14px;
 }
 
-@media (max-width: 320px) {
+.action-preview {
+    background: #6c757d;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.action-preview:hover:not(:disabled) {
+    background: #5a6268;
+}
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+}
+
+.toast {
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    color: white;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-success {
+    background: var(--success-color);
+}
+
+.toast-error {
+    background: var(--error-color);
+}
+
+.toast-warning {
+    background: var(--warning-color);
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        margin: 15px auto;
+    }
+    .preview {
+        width: 70px;
+        height: 70px;
+    }
+    .preview.zoomed {
+        width: 180px;
+        height: 180px;
+    }
+    .popup {
+        max-width: 80%;
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
     .container {
         padding: 10px;
     }
@@ -583,33 +378,52 @@ button:hover:not(:disabled) {
         width: 150px;
         height: 150px;
     }
+    .popup {
+        max-width: 90%;
+        padding: 10px;
+    }
+    button {
+        font-size: 13px;
+        padding: 8px;
+    }
+    #historyPopup table {
+        font-size: 12px;
+    }
+    #historyPopup th, #historyPopup td {
+        padding: 6px;
+    }
 }
 
+@media (max-width: 320px) {
+    .container {
+        padding: 8px;
+    }
+    .preview {
+        width: 50px;
+        height: 50px;
+    }
+    .preview.zoomed {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+/* Keyframes */
 @keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes zoomIn {
-    from {
-        transform: translate(-50%, -50%) scale(0.7);
-        opacity: 0;
-    }
-    to {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
+    from { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
