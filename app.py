@@ -67,7 +67,6 @@ def upload():
             ftp_conn.mkd(ftp_directory)
             ftp_conn.cwd(ftp_directory)
 
-        # Lấy danh sách file
         existing_files = set()
         try:
             existing_files = set(ftp_conn.nlst() or [])
@@ -135,7 +134,7 @@ def list_files_by_date():
     ftp_conn = None
     try:
         ftp_account_id = request.form.get('ftpAccount')
-        date = request.form.get('date')  # Định dạng: YYYY-MM-DD
+        date = request.form.get('date')
         if not ftp_account_id or ftp_account_id not in FTP_ACCOUNTS:
             return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
         if not date:
@@ -147,7 +146,6 @@ def list_files_by_date():
         ftp_conn.login(ftp['username'], ftp['password'])
         ftp_conn.set_pasv(True)
 
-        # Chuyển định dạng ngày thành dd.mm.yy
         try:
             selected_date = datetime.strptime(date, '%Y-%m-%d')
             ftp_date = selected_date.strftime('%d.%m.%y')
