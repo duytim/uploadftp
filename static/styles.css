@@ -308,9 +308,65 @@ button.loading::after {
     font-size: 14px;
 }
 
+/* Nút trong popup */
 .popup button {
-    padding: 8px 20px;
     width: auto;
+    padding: 8px 20px;
+    margin: 5px;
+    font-size: 14px;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.popup button:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+/* Nút trong #successPopup */
+#successPopup button {
+    background: var(--success-color);
+}
+
+#successPopup button:hover:not(:disabled) {
+    background: #219653;
+}
+
+/* Nút Tìm kiếm trong #historyPopup */
+#historyPopup #fetchHistory {
+    background: var(--primary-color);
+}
+
+#historyPopup #fetchHistory:hover:not(:disabled) {
+    background: #1557b0;
+}
+
+/* Nút Đóng trong #historyPopup */
+#historyPopup button:not(#fetchHistory) {
+    background: var(--error-color);
+}
+
+#historyPopup button:not(#fetchHistory):hover:not(:disabled) {
+    background: #c62828;
+}
+
+/* Nút Kiểm tra trong #checkPopup */
+#checkPopup #fetchCheck {
+    background: var(--primary-color);
+}
+
+#checkPopup #fetchCheck:hover:not(:disabled) {
+    background: #1557b0;
+}
+
+/* Nút Đóng trong #checkPopup */
+#checkPopup button:not(#fetchCheck) {
+    background: var(--error-color);
+}
+
+#checkPopup button:not(#fetchCheck):hover:not(:disabled) {
+    background: #c62828;
 }
 
 .success-message {
