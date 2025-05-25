@@ -44,12 +44,22 @@ def upload():
 
         report_type = request.form.get('reportType')
         custom_name = request.form.get('customName', '').strip()
+        custom_date = request.form.get('customDate')
         if not report_type:
             logger.error("Missing report type")
             return jsonify({'success': False, 'message': 'Vui lòng chọn loại báo cáo!'}), 400
         if report_type == 'Custom' and not custom_name:
             logger.error("Missing custom name for Custom report")
             return jsonify({'success': False, 'message': 'Vui lòng nhập tên file cho báo cáo tùy chỉnh!'}), 400
+        if custom_date:
+            try:
+                selected_date = datetime.strptime(custom_date, '%Y-%m-%d')
+                date = selected_date.strftime('%d.%m.%y')
+            except ValueError:
+                logger.error("Invalid custom date format")
+                return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ!'}), 400
+        else:
+            date = datetime.now(TIMEZONE).strftime('%d.%m.%y')
 
         logger.debug(f"Connecting to FTP: {ftp['server']}")
         ftp_conn = ftplib.FTP()
@@ -57,7 +67,6 @@ def upload():
         ftp_conn.login(ftp['username'], ftp['password'])
         ftp_conn.set_pasv(True)
 
-        date = datetime.now(TIMEZONE).strftime('%d.%m.%y')
         ftp_directory = f"/KSQT/{date}/"
         logger.debug(f"Checking FTP directory: {ftp_directory}")
         try:
@@ -164,6 +173,58 @@ def list_files_by_date():
             return jsonify({'success': False, 'message': f'Thư mục cho ngày {ftp_date} trống!'}), 200
 
         return jsonify({'success': True, 'files': files})
+    except ftplib.all_errors as e:
+        logger.error(f"FTP error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Lỗi kết nối FTP: {str(e)}'}), 500
+    finally:
+        if ftp_conn:
+            try:
+                ftp_conn.quit()
+                logger.debug("FTP connection closed")
+            except:
+                pass
+
+@app.route('/check_reports', methods=['POST'])
+def check_reports():
+    ftp_conn = None
+    try:
+        ftp_account_id = request.form.get('ftpAccount')
+        date = request.form.get('date')
+        if not ftp_account_id or ftp_account_id not in FTP_ACCOUNTS:
+            return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
+        if not date:
+            return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
+
+        ftp = FTP_ACCOUNTS[ftp_account_id]
+        ftp_conn = ftplib.FTP()
+        ftp_conn.connect(ftp['server'], timeout=60)
+        ftp_conn.login(ftp['username'], ftp['password'])
+        ftp_conn.set_pasv(True)
+
+        try:
+            selected_date = datetime.strptime(date, '%Y-%m-%d')
+            ftp_date = selected_date.strftime('%d.%m.%y')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ!'}), 400
+
+        ftp_directory = f"/KSQT/{ftp_date}/"
+        logger.debug(f"Checking FTP directory: {ftp_directory}")
+        try:
+            ftp_conn.cwd(ftp_directory)
+        except ftplib.all_errors:
+            return jsonify({'success': False, 'message': f'Thư mục cho ngày {ftp_date} không tồn tại!'}), 404
+
+        files = ftp_conn.nlst() or []
+        files_lower = [f.lower() for f in files]
+        report_types = ['BCDongMoCua', 'BaoCaoGiaoBan', 'ThayDoiGia', 'BatTatMatTien', 'BCDaoTao']
+        reports_status = {}
+        for report in report_types:
+            reports_status[report] = any(report.lower() in f for f in files_lower)
+
+        return jsonify({
+            'success': True,
+            'reports': reports_status
+        })
     except ftplib.all_errors as e:
         logger.error(f"FTP error: {str(e)}")
         return jsonify({'success': False, 'message': f'Lỗi kết nối FTP: {str(e)}'}), 500
