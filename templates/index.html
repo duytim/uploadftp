@@ -26,6 +26,11 @@
                 <option value="Custom">Bổ Sung Báo Cáo Khác</option>
             </select>
             <input type="text" id="customName" name="customName" placeholder="Nhập tên file (nếu chọn 'Khác')" style="display:none" aria-label="Tên file tùy chỉnh">
+            <label class="checkbox-label">
+                <input type="checkbox" id="customDateCheck" name="customDateCheck" aria-label="Upload theo ngày tùy chọn">
+                Upload theo ngày tùy chọn
+            </label>
+            <input type="date" id="customDate" name="customDate" style="display:none" aria-label="Chọn ngày upload">
             <div class="drop-zone" id="dropZone" aria-label="Kéo thả ảnh vào đây">
                 Kéo thả tối đa 5 ảnh hoặc nhấn để chọn
                 <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/gif" multiple style="display:none" aria-hidden="true">
@@ -33,6 +38,7 @@
             <div class="preview-container" id="previewContainer"></div>
             <button type="submit" id="uploadButton">Upload</button>
             <button type="button" id="historyMenu">Lịch sử</button>
+            <button type="button" id="checkMenu">Kiểm tra</button>
             <button type="button" id="cancelButton" style="display:none">Hủy</button>
             <progress id="progress" value="0" max="100" style="display:none" aria-label="Thanh tiến trình upload"></progress>
             <div id="progress-info"></div>
@@ -63,6 +69,19 @@
         <div id="historyTable" class="table-container"></div>
         <button onclick="closeHistoryPopup()">Đóng</button>
     </div>
+    <div class="popup" id="checkPopup" role="dialog" aria-labelledby="checkPopupTitle">
+        <h3 id="checkPopupTitle">Kiểm tra báo cáo</h3>
+        <select id="ftpAccountCheck" name="ftpAccountCheck" aria-label="Tài khoản FTP" required>
+            <option value="" disabled selected>Chọn tài khoản FTP</option>
+            <option value="1">BN_LTT - Bắc Ninh</option>
+            <option value="2">HN_NVL - Sài Đồng</option>
+            <option value="3">HN_NVC - Long Biên</option>
+        </select>
+        <input type="date" id="checkDate" aria-label="Chọn ngày kiểm tra">
+        <button id="fetchCheck">Kiểm tra</button>
+        <div id="checkTable" class="table-container"></div>
+        <button onclick="closeCheckPopup()">Đóng</button>
+    </div>
     <div id="toastContainer" class="toast-container"></div>
 
     <script>
@@ -78,6 +97,8 @@
             ftpAccount: document.getElementById('ftpAccount'),
             reportType: document.getElementById('reportType'),
             customName: document.getElementById('customName'),
+            customDateCheck: document.getElementById('customDateCheck'),
+            customDate: document.getElementById('customDate'),
             dropZone: document.getElementById('dropZone'),
             fileInput: document.getElementById('images'),
             previewContainer: document.getElementById('previewContainer'),
@@ -152,6 +173,15 @@
             elements.customName.value = '';
             if (elements.customName.style.display === 'block') {
                 elements.customName.focus();
+            }
+        });
+
+        // Xử lý checkbox ngày tùy chọn
+        elements.customDateCheck.addEventListener('change', () => {
+            elements.customDate.style.display = elements.customDateCheck.checked ? 'block' : 'none';
+            elements.customDate.value = '';
+            if (elements.customDateCheck.checked) {
+                elements.customDate.focus();
             }
         });
 
@@ -266,6 +296,11 @@
                 elements.customName.focus();
                 return;
             }
+            if (elements.customDateCheck.checked && !elements.customDate.value) {
+                showError('Vui lòng chọn ngày upload!');
+                elements.customDate.focus();
+                return;
+            }
 
             const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
             if (files.length === 0) {
@@ -279,6 +314,9 @@
             formData.append('ftpAccount', elements.ftpAccount.value);
             formData.append('reportType', elements.reportType.value);
             formData.append('customName', sanitizeFileName(elements.customName.value));
+            if (elements.customDateCheck.checked) {
+                formData.append('customDate', elements.customDate.value);
+            }
 
             for (const file of files) {
                 formData.append('images[]', file);
@@ -335,6 +373,8 @@
             elements.previewContainer.innerHTML = '';
             clearError();
             elements.customName.style.display = 'none';
+            elements.customDate.style.display = 'none';
+            elements.customDateCheck.checked = false;
             elements.progress.style.display = 'none';
             elements.progressInfo.textContent = '';
             elements.fileProgress.textContent = '';
@@ -372,7 +412,7 @@
                 });
                 const json = await response.json();
                 if (json.success) {
-                    const fakeTime = new Date().toLocaleTimeString('vi-VN'); // Giả lập thời gian
+                    const fakeTime = new Date().toLocaleTimeString('vi-VN');
                     historyTable.innerHTML = `
                         <table>
                             <thead>
@@ -406,6 +446,65 @@
             }
         }
 
+        async function displayCheckReport() {
+            const date = document.getElementById('checkDate').value;
+            const ftpAccount = document.getElementById('ftpAccountCheck').value;
+            const checkTable = document.getElementById('checkTable');
+            checkTable.classList.add('loading');
+
+            if (!ftpAccount) {
+                checkTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
+                checkTable.classList.remove('loading');
+                showToast('Vui lòng chọn tài khoản FTP!', 'error');
+                return;
+            }
+            if (!date) {
+                checkTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
+                checkTable.classList.remove('loading');
+                showToast('Vui lòng chọn ngày!', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('ftpAccount', ftpAccount);
+                formData.append('date', date);
+                const response = await fetch('/check_reports', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await response.json();
+                if (json.success) {
+                    checkTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Loại báo cáo</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Báo Cáo Biên Bản Đóng Mở Cửa</td><td>${json.reports.BCDongMoCua ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Giao Ban</td><td>${json.reports.BaoCaoGiaoBan ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Thay Đổi Giá</td><td>${json.reports.ThayDoiGia ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Bật Tắt Mặt Tiền</td><td>${json.reports.BatTatMatTien ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Đào Tạo</td><td>${json.reports.BCDaoTao ? '✅' : '❌'}</td></tr>
+                            </tbody>
+                        </table>
+                    `;
+                    showToast('Kiểm tra báo cáo thành công!', 'success');
+                } else {
+                    checkTable.innerHTML = `<p class="error">${json.message}</p>`;
+                    showToast(json.message, 'error');
+                }
+            } catch (error) {
+                checkTable.innerHTML = `<p class="error">Lỗi khi kiểm tra báo cáo: ${error.message}</p>`;
+                showToast(`Lỗi: ${error.message}`, 'error');
+            } finally {
+                checkTable.classList.remove('loading');
+            }
+        }
+
         function openHistoryPopup() {
             document.getElementById('historyPopup').classList.add('active');
             document.getElementById('historyPopup').style.display = 'block';
@@ -417,6 +516,19 @@
             document.getElementById('historyTable').innerHTML = '';
             document.getElementById('historyDate').value = '';
             document.getElementById('ftpAccountHistory').value = '';
+        }
+
+        function openCheckPopup() {
+            document.getElementById('checkPopup').classList.add('active');
+            document.getElementById('checkPopup').style.display = 'block';
+        }
+
+        function closeCheckPopup() {
+            document.getElementById('checkPopup').classList.remove('active');
+            document.getElementById('checkPopup').style.display = 'none';
+            document.getElementById('checkTable').innerHTML = '';
+            document.getElementById('checkDate').value = '';
+            document.getElementById('ftpAccountCheck').value = '';
         }
 
         function toggleTheme() {
@@ -433,7 +545,9 @@
                 document.querySelector('.theme-icon').textContent = '☀️';
             }
             document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
+            document.getElementById('checkMenu').addEventListener('click', openCheckPopup);
             document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);
+            document.getElementById('fetchCheck').addEventListener('click', displayCheckReport);
             document.getElementById('themeToggle').addEventListener('click', toggleTheme);
         });
     </script>
