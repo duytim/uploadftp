@@ -9,10 +9,17 @@ from dotenv import load_dotenv
 # Tải biến môi trường từ .env
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
+
+# Kiểm tra biến môi trường
+required_vars = ['FTP_SERVER', 'FTP_USERNAME_1', 'FTP_USERNAME_2', 'FTP_USERNAME_3', 'FTP_PASSWORD']
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+if missing_vars:
+    logger.error(f"Missing environment variables: {', '.join(missing_vars)}")
+    raise ValueError(f"Missing environment variables: {', '.join(missing_vars)}")
 
 # Đọc thông tin FTP từ biến môi trường
 FTP_ACCOUNTS = {
@@ -44,7 +51,7 @@ TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')
 @app.route('/')
 def index():
     logger.debug("Serving index page")
-    return render_template('index.html')
+    return render_template('index.html', FTP_ACCOUNTS=FTP_ACCOUNTS)
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -174,6 +181,10 @@ def list_files_by_date():
             return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
+        if not all([ftp['server'], ftp['username'], ftp['password']]):
+            logger.error("Missing FTP credentials")
+            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
+
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
@@ -220,6 +231,10 @@ def check_reports():
             return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
+        if not all([ftp['server'], ftp['username'], ftp['password']]):
+            logger.error("Missing FTP credentials")
+            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
+
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
