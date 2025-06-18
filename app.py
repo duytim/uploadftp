@@ -4,16 +4,36 @@ import os
 from datetime import datetime
 import logging
 import pytz
+from dotenv import load_dotenv
+
+# Tải biến môi trường từ .env
+load_dotenv()
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
+# Đọc thông tin FTP từ biến môi trường
 FTP_ACCOUNTS = {
-    '1': {'server': '123.30.3.61', 'username': 'ksqtbacninh', 'password': 'ksqtvhc', 'description': 'BN_LTT - Bắc Ninh'},
-    '2': {'server': '123.30.3.61', 'username': 'ksqtsaidong', 'password': 'ksqtvhc', 'description': 'HN_NVL - Sài Đồng'},
-    '3': {'server': '123.30.3.61', 'username': 'ksqtlongbien', 'password': 'ksqtvhc', 'description': 'HN_NVC - Long Biên'}
+    '1': {
+        'server': os.getenv('FTP_SERVER_1'),
+        'username': os.getenv('FTP_USERNAME_1'),
+        'password': os.getenv('FTP_PASSWORD_1'),
+        'description': 'BN_LTT - Bắc Ninh'
+    },
+    '2': {
+        'server': os.getenv('FTP_SERVER_2'),
+        'username': os.getenv('FTP_USERNAME_2'),
+        'password': os.getenv('FTP_PASSWORD_2'),
+        'description': 'HN_NVL - Sài Đồng'
+    },
+    '3': {
+        'server': os.getenv('FTP_SERVER_3'),
+        'username': os.getenv('FTP_USERNAME_3'),
+        'password': os.getenv('FTP_PASSWORD_3'),
+        'description': 'HN_NVC - Long Biên'
+    }
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
@@ -37,6 +57,10 @@ def upload():
             return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
+        if not all([ftp['server'], ftp['username'], ftp['password']]):
+            logger.error("Missing FTP credentials")
+            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
+
         files = request.files.getlist('images[]')
         if not files or len(files) > MAX_FILES:
             logger.error(f"Invalid file count: {len(files)}")
