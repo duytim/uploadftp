@@ -17,21 +17,21 @@ logger = logging.getLogger(__name__)
 # Đọc thông tin FTP từ biến môi trường
 FTP_ACCOUNTS = {
     '1': {
-        'server': os.getenv('FTP_SERVER_1'),
+        'server': os.getenv('FTP_SERVER'),
         'username': os.getenv('FTP_USERNAME_1'),
-        'password': os.getenv('FTP_PASSWORD_1'),
+        'password': os.getenv('FTP_PASSWORD'),
         'description': 'BN_LTT - Bắc Ninh'
     },
     '2': {
-        'server': os.getenv('FTP_SERVER_2'),
+        'server': os.getenv('FTP_SERVER'),
         'username': os.getenv('FTP_USERNAME_2'),
-        'password': os.getenv('FTP_PASSWORD_2'),
+        'password': os.getenv('FTP_PASSWORD'),
         'description': 'HN_NVL - Sài Đồng'
     },
     '3': {
-        'server': os.getenv('FTP_SERVER_3'),
+        'server': os.getenv('FTP_SERVER'),
         'username': os.getenv('FTP_USERNAME_3'),
-        'password': os.getenv('FTP_PASSWORD_3'),
+        'password': os.getenv('FTP_PASSWORD'),
         'description': 'HN_NVC - Long Biên'
     }
 }
