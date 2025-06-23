@@ -6,52 +6,48 @@ import logging
 import pytz
 from dotenv import load_dotenv
 
-# Tải biến môi trường từ .env
-load_dotenv()
+app = Flask(__name__)
 
-app = Flask(__name__, static_url_path='/static')
+# Tải biến môi trường từ tệp .env
+load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-# Kiểm tra biến môi trường
-required_vars = ['FTP_SERVER', 'FTP_USERNAME_1', 'FTP_USERNAME_2', 'FTP_USERNAME_3', 'FTP_PASSWORD']
-missing_vars = [var for var in required_vars if not os.getenv(var)]
-if missing_vars:
-    logger.error(f"Missing environment variables: {', '.join(missing_vars)}")
-    raise ValueError(f"Missing environment variables: {', '.join(missing_vars)}")
+# Lấy thông tin FTP từ biến môi trường
+FTP_SERVER = os.getenv('FTP_SERVER')
+FTP_PASSWORD = os.getenv('FTP_PASSWORD')
 
-# Đọc thông tin FTP từ biến môi trường
 FTP_ACCOUNTS = {
     '1': {
-        'server': os.getenv('FTP_SERVER'),
-        'username': os.getenv('FTP_USERNAME_1'),
-        'password': os.getenv('FTP_PASSWORD'),
+        'server': FTP_SERVER,
+        'username': os.getenv('FTP_USERNAME_BN_LTT'),
+        'password': FTP_PASSWORD,
         'description': 'BN_LTT - Bắc Ninh'
     },
     '2': {
-        'server': os.getenv('FTP_SERVER'),
-        'username': os.getenv('FTP_USERNAME_2'),
-        'password': os.getenv('FTP_PASSWORD'),
+        'server': FTP_SERVER,
+        'username': os.getenv('FTP_USERNAME_HN_NVL'),
+        'password': FTP_PASSWORD,
         'description': 'HN_NVL - Sài Đồng'
     },
     '3': {
-        'server': os.getenv('FTP_SERVER'),
-        'username': os.getenv('FTP_USERNAME_3'),
-        'password': os.getenv('FTP_PASSWORD'),
+        'server': FTP_SERVER,
+        'username': os.getenv('FTP_USERNAME_HN_NVC'),
+        'password': FTP_PASSWORD,
         'description': 'HN_NVC - Long Biên'
     }
 }
 
 ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif'}
 MAX_FILE_SIZE = 10 * 1024 * 1024
-MAX_FILES = 5
+MAX_FILES = 10
 TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')
 
 @app.route('/')
 def index():
     logger.debug("Serving index page")
-    return render_template('index.html', FTP_ACCOUNTS=FTP_ACCOUNTS)
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -64,10 +60,6 @@ def upload():
             return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
-        if not all([ftp['server'], ftp['username'], ftp['password']]):
-            logger.error("Missing FTP credentials")
-            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
-
         files = request.files.getlist('images[]')
         if not files or len(files) > MAX_FILES:
             logger.error(f"Invalid file count: {len(files)}")
@@ -181,10 +173,6 @@ def list_files_by_date():
             return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
-        if not all([ftp['server'], ftp['username'], ftp['password']]):
-            logger.error("Missing FTP credentials")
-            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
-
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
@@ -231,10 +219,6 @@ def check_reports():
             return jsonify({'success': False, 'message': 'Vui lòng chọn ngày!'}), 400
 
         ftp = FTP_ACCOUNTS[ftp_account_id]
-        if not all([ftp['server'], ftp['username'], ftp['password']]):
-            logger.error("Missing FTP credentials")
-            return jsonify({'success': False, 'message': 'Thông tin FTP không đầy đủ!'}), 500
-
         ftp_conn = ftplib.FTP()
         ftp_conn.connect(ftp['server'], timeout=60)
         ftp_conn.login(ftp['username'], ftp['password'])
