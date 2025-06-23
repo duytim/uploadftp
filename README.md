@@ -66,15 +66,6 @@ project/
      FTP_USERNAME_HN_NVC=<username_hn_nvc>
      ```
    - Thay thế `<địa_chỉ_server_ftp>`, `<mật_khẩu_ftp>`, `<username_...>` bằng thông tin thực tế của bạn.
-   - Ví dụ:
-     ```
-     FTP_SERVER=123.30.3.61
-     FTP_PASSWORD=ksqtvhc
-     FTP_USERNAME_BN_LTT=ksqtbacninh
-     FTP_USERNAME_HN_NVL=ksqtsaidong
-     FTP_USERNAME_HN_NVC=ksqtlongbien
-     ```
-
 5. **Cập nhật `.gitignore`**:
    - Thêm dòng sau vào tệp `.gitignore` để bảo vệ thông tin nhạy cảm:
      ```
