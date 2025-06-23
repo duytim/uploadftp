@@ -47,7 +47,7 @@ TIMEZONE = pytz.timezone('Asia/Ho_Chi_Minh')
 @app.route('/')
 def index():
     logger.debug("Serving index page")
-    return render_template('index.html')
+    return render_template('index.html', FTP_ACCOUNTS=FTP_ACCOUNTS)
 
 @app.route('/upload', methods=['POST'])
 def upload():
