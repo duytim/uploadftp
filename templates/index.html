@@ -9,96 +9,547 @@
 <body>
     <div class="container">
         <h2>Upload Ảnh Báo Cáo</h2>
-        <form id="uploadForm" enctype="multipart/form-data">
-            <select id="ftpAccount" name="ftpAccount" required aria-label="Chọn tài khoản FTP">
+        <form id="uploadForm" enctype="multipart/form-data" aria-label="Form upload ảnh">
+            <select id="ftpAccount" name="ftpAccount" aria-label="Tài khoản FTP" required>
                 <option value="" disabled selected>Chọn tài khoản FTP</option>
-                {% for key, account in FTP_ACCOUNTS.items() %}
-                <option value="{{ key }}">{{ account.description }}</option>
-                {% endfor %}
+                <option value="1">BN_LTT - Bắc Ninh</option>
+                <option value="2">HN_NVL - Sài Đồng</option>
+                <option value="3">HN_NVC - Long Biên</option>
             </select>
-            <select id="reportType" name="reportType" required aria-label="Chọn loại báo cáo">
+            <select id="reportType" name="reportType" aria-label="Loại báo cáo" required>
                 <option value="" disabled selected>Chọn loại báo cáo</option>
-                <option value="BCDongMoCua">Báo Cáo Đóng Mở Cửa</option>
+                <option value="BCDongMoCua">Báo Cáo Biên Bản Đóng Mở Cửa</option>
                 <option value="BaoCaoGiaoBan">Báo Cáo Giao Ban</option>
-                <option value="ThayDoiGia">Thay Đổi Giá</option>
-                <option value="BatTatMatTien">Bật Tắt Mặt Tiền</option>
+                <option value="ThayDoiGia">Báo Cáo Thay Đổi Giá</option>
+                <option value="BatTatMatTien">Báo Cáo Bật Tắt Mặt Tiền</option>
                 <option value="BCDaoTao">Báo Cáo Đào Tạo</option>
-                <option value="Custom">Tùy chỉnh</option>
+                <option value="Custom">Bổ Sung Báo Cáo Khác</option>
             </select>
-            <input type="text" id="customName" name="customName" placeholder="Nhập tên file tùy chỉnh" style="display: none;" aria-label="Tên file tùy chỉnh">
-            <input type="date" id="customDate" name="customDate" aria-label="Chọn ngày tùy chỉnh">
-            <div class="drop-zone" id="dropZone" role="region" aria-label="Kéo thả ảnh tại đây">
-                Kéo thả ảnh vào đây hoặc nhấn để chọn
-                <input type="file" id="fileInput" name="images[]" multiple accept="image/jpeg,image/png,image/gif" hidden aria-label="Chọn file ảnh">
+            <input type="text" id="customName" name="customName" placeholder="Nhập tên file (nếu chọn 'Khác')" style="display:none" aria-label="Tên file tùy chỉnh">
+            <label class="checkbox-label">
+                <input type="checkbox" id="customDateCheck" name="customDateCheck" aria-label="Upload theo ngày tùy chọn">
+                Upload theo ngày tùy chọn
+            </label>
+            <input type="date" id="customDate" name="customDate" style="display:none" aria-label="Chọn ngày upload">
+            <div class="drop-zone" id="dropZone" aria-label="Kéo thả ảnh vào đây">
+                Kéo thả tối đa 5 ảnh hoặc nhấn để chọn
+                <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/gif" multiple style="display:none" aria-hidden="true">
             </div>
             <div class="preview-container" id="previewContainer"></div>
-            <button type="submit" id="uploadButton" disabled>Upload</button>
+            <button type="submit" id="uploadButton">Upload</button>
+            <button type="button" id="historyMenu">Lịch sử</button>
+            <button type="button" id="checkMenu">Kiểm tra</button>
+            <button type="button" id="cancelButton" style="display:none">Hủy</button>
+            <progress id="progress" value="0" max="100" style="display:none" aria-label="Thanh tiến trình upload"></progress>
+            <div id="progress-info"></div>
+            <div id="file-progress" aria-live="polite"></div>
+            <div id="result" aria-live="polite"></div>
         </form>
-        <button id="checkButton" aria-label="Kiểm tra báo cáo">Kiểm tra báo cáo</button>
-        <button id="historyButton" aria-label="Xem lịch sử">Xem lịch sử</button>
-        <button id="themeToggle" aria-label="Chuyển đổi giao diện sáng/tối">Chuyển giao diện</button>
+        <div class="theme-toggle-container">
+            <button id="themeToggle" aria-label="Chuyển đổi giao diện">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </div>
     </div>
-
-    <div class="popup" id="successPopup">
-        <h3>Thành công</h3>
+    <div class="popup" id="successPopup" role="dialog" aria-labelledby="successPopupTitle">
+        <h3 id="successPopupTitle">Upload Thành Công!</h3>
         <p id="successMessage"></p>
-        <button onclick="closePopup('successPopup')" aria-label="Đóng thông báo thành công">OK</button>
+        <button onclick="closePopup()">OK</button>
     </div>
-    <div class="popup" id="errorPopup">
-        <h3>Lỗi</h3>
-        <p id="errorMessage"></p>
-        <button onclick="closePopup('errorPopup')" aria-label="Đóng thông báo lỗi">OK</button>
-    </div>
-    <div class="popup" id="warningPopup">
-        <h3>Cảnh báo</h3>
-        <p id="warningMessage"></p>
-        <button onclick="closePopup('warningPopup')" aria-label="Đóng thông báo cảnh báo">OK</button>
-    </div>
-    <div class="popup" id="checkPopup">
-        <h3>Kiểm tra báo cáo</h3>
-        <select id="checkFtpAccount" aria-label="Chọn tài khoản FTP để kiểm tra">
+    <div class="popup" id="historyPopup" role="dialog" aria-labelledby="historyPopupTitle">
+        <h3 id="historyPopupTitle">Lịch sử file đã upload</h3>
+        <select id="ftpAccountHistory" name="ftpAccountHistory" aria-label="Tài khoản FTP" required>
             <option value="" disabled selected>Chọn tài khoản FTP</option>
-            {% for key, account in FTP_ACCOUNTS.items() %}
-            <option value="{{ key }}">{{ account.description }}</option>
-            {% endfor %}
+            <option value="1">BN_LTT - Bắc Ninh</option>
+            <option value="2">HN_NVL - Sài Đồng</option>
+            <option value="3">HN_NVC - Long Biên</option>
+        </select>
+        <input type="date" id="historyDate" aria-label="Chọn ngày">
+        <button id="fetchHistory">Tìm kiếm</button>
+        <div id="historyTable" class="table-container"></div>
+        <button onclick="closeHistoryPopup()">Đóng</button>
+    </div>
+    <div class="popup" id="checkPopup" role="dialog" aria-labelledby="checkPopupTitle">
+        <h3 id="checkPopupTitle">Kiểm tra báo cáo</h3>
+        <select id="ftpAccountCheck" name="ftpAccountCheck" aria-label="Tài khoản FTP" required>
+            <option value="" disabled selected>Chọn tài khoản FTP</option>
+            <option value="1">BN_LTT - Bắc Ninh</option>
+            <option value="2">HN_NVL - Sài Đồng</option>
+            <option value="3">HN_NVC - Long Biên</option>
         </select>
         <input type="date" id="checkDate" aria-label="Chọn ngày kiểm tra">
-        <div class="table-container" id="checkTableContainer">
-            <table id="checkTable">
-                <thead>
-                    <tr>
-                        <th>Báo cáo</th>
-                        <th>Trạng thái</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <button onclick="closePopup('checkPopup')" aria-label="Đóng cửa sổ kiểm tra">Đóng</button>
+        <button id="fetchCheck">Kiểm tra</button>
+        <div id="checkTable" class="table-container"></div>
+        <button onclick="closeCheckPopup()">Đóng</button>
     </div>
-    <div class="popup" id="historyPopup">
-        <h3>Lịch sử</h3>
-        <select id="historyFtpAccount" aria-label="Chọn tài khoản FTP để xem lịch sử">
-            <option value="" disabled selected>Chọn tài khoản FTP</option>
-            {% for key, account in FTP_ACCOUNTS.items() %}
-            <option value="{{ key }}">{{ account.description }}</option>
-            {% endfor %}
-        </select>
-        <input type="date" id="historyDate" aria-label="Chọn ngày xem lịch sử">
-        <div class="table-container" id="historyTableContainer">
-            <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Hành động</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <button onclick="closePopup('historyPopup')" aria-label="Đóng cửa sổ lịch sử">Đóng</button>
-    </div>
+    <div id="toastContainer" class="toast-container"></div>
 
-    <script src="/static/script.js"></script>
+    <script>
+        const CONFIG = {
+            MAX_FILE_SIZE: 10 * 1024 * 1024,
+            MAX_FILES: 5,
+            ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
+        };
+
+        const state = { isUploading: false, abortController: null };
+        const elements = {
+            form: document.getElementById('uploadForm'),
+            ftpAccount: document.getElementById('ftpAccount'),
+            reportType: document.getElementById('reportType'),
+            customName: document.getElementById('customName'),
+            customDateCheck: document.getElementById('customDateCheck'),
+            customDate: document.getElementById('customDate'),
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('images'),
+            previewContainer: document.getElementById('previewContainer'),
+            uploadButton: document.getElementById('uploadButton'),
+            cancelButton: document.getElementById('cancelButton'),
+            progress: document.getElementById('progress'),
+            progressInfo: document.getElementById('progress-info'),
+            fileProgress: document.getElementById('file-progress'),
+            result: document.getElementById('result'),
+            successPopup: document.getElementById('successPopup'),
+            successMessage: document.getElementById('successMessage')
+        };
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }, 100);
+        }
+
+        function sanitizeFileName(name) {
+            return name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50);
+        }
+
+        function showError(message) {
+            showToast(`Lỗi: ${message}`, 'error');
+            elements.fileProgress.textContent = '';
+        }
+
+        function clearError() {
+            elements.result.textContent = '';
+        }
+
+        function updateUI(uploading) {
+            state.isUploading = uploading;
+            elements.uploadButton.disabled = uploading;
+            elements.uploadButton.textContent = uploading ? 'Đang upload...' : 'Upload';
+            elements.cancelButton.style.display = uploading ? 'inline-block' : 'none';
+            elements.progress.style.display = uploading ? 'block' : 'none';
+            elements.progressInfo.textContent = uploading ? 'Đang xử lý...' : '';
+            if (!uploading) {
+                elements.fileProgress.textContent = '';
+                elements.progress.value = 0;
+            }
+            elements.uploadButton.classList.toggle('loading', uploading);
+        }
+
+        // Lưu và khôi phục tài khoản FTP
+        function saveFtpAccount() {
+            localStorage.setItem('selectedFtpAccount', elements.ftpAccount.value);
+        }
+
+        function restoreFtpAccount() {
+            const savedFtp = localStorage.getItem('selectedFtpAccount');
+            if (savedFtp && elements.ftpAccount.querySelector(`option[value="${savedFtp}"]`)) {
+                elements.ftpAccount.value = savedFtp;
+            }
+        }
+
+        elements.ftpAccount.addEventListener('change', saveFtpAccount);
+
+        elements.reportType.addEventListener('change', () => {
+            elements.customName.style.display = elements.reportType.value === 'Custom' ? 'block' : 'none';
+            elements.customName.value = '';
+            if (elements.customName.style.display === 'block') {
+                elements.customName.focus();
+            }
+        });
+
+        // Xử lý checkbox ngày tùy chọn
+        elements.customDateCheck.addEventListener('change', () => {
+            elements.customDate.style.display = elements.customDateCheck.checked ? 'block' : 'none';
+            elements.customDate.value = '';
+            if (elements.customDateCheck.checked) {
+                elements.customDate.focus();
+            }
+        });
+
+        elements.dropZone.addEventListener('click', () => {
+            if (!state.isUploading) elements.fileInput.click();
+        });
+
+        elements.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!state.isUploading) elements.dropZone.classList.add('dragover');
+        });
+
+        elements.dropZone.addEventListener('dragleave', () => {
+            elements.dropZone.classList.remove('dragover');
+        });
+
+        elements.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            elements.dropZone.classList.remove('dragover');
+            if (!state.isUploading) {
+                elements.fileInput.files = e.dataTransfer.files;
+                previewImages();
+            }
+        });
+
+        elements.fileInput.addEventListener('change', previewImages);
+
+        elements.cancelButton.addEventListener('click', () => {
+            if (state.abortController) {
+                state.abortController.abort();
+                updateUI(false);
+                showError('Upload đã bị hủy');
+            }
+        });
+
+        function previewImages() {
+            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+            elements.previewContainer.innerHTML = '';
+            clearError();
+
+            if (elements.fileInput.files.length > CONFIG.MAX_FILES) {
+                showError(`Chỉ được chọn tối đa ${CONFIG.MAX_FILES} ảnh!`);
+                elements.fileInput.value = '';
+                return;
+            }
+
+            const fileList = new DataTransfer();
+            for (const file of files) {
+                if (!CONFIG.ALLOWED_TYPES.includes(file.type)) {
+                    showError(`File ${file.name} không phải ảnh hợp lệ (chỉ chấp nhận JPEG, PNG, GIF)!`);
+                    continue;
+                }
+                if (file.size > CONFIG.MAX_FILE_SIZE) {
+                    showError(`File ${file.name} vượt quá 10MB!`);
+                    continue;
+                }
+
+                const container = document.createElement('div');
+                container.className = 'preview-item';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview';
+                img.alt = `Xem trước ${file.name}`;
+                img.onerror = () => showError(`Không thể hiển thị ảnh ${file.name}`);
+                img.onclick = () => {
+                    document.querySelectorAll('.preview.zoomed').forEach(otherImg => {
+                        if (otherImg !== img) {
+                            otherImg.classList.remove('zoomed');
+                            otherImg.classList.add('minimized');
+                        }
+                    });
+                    img.classList.toggle('zoomed');
+                    if (!img.classList.contains('zoomed')) {
+                        document.querySelectorAll('.preview.minimized').forEach(otherImg => {
+                            otherImg.classList.remove('minimized');
+                        });
+                    }
+                };
+
+                const removeBtn = document.createElement('button');
+                removeBtn.innerHTML = '×';
+                removeBtn.className = 'remove-preview';
+                removeBtn.onclick = () => {
+                    container.remove();
+                    const newFiles = Array.from(elements.fileInput.files).filter(f => f !== file);
+                    newFiles.forEach(f => fileList.items.add(f));
+                    elements.fileInput.files = fileList.files;
+                };
+
+                container.appendChild(img);
+                container.appendChild(removeBtn);
+                elements.previewContainer.appendChild(container);
+                fileList.items.add(file);
+            }
+            elements.fileInput.files = fileList.files;
+        }
+
+        elements.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
+
+            if (!elements.ftpAccount.value) {
+                showError('Vui lòng chọn tài khoản FTP!');
+                return;
+            }
+            if (!elements.reportType.value) {
+                showError('Vui lòng chọn loại báo cáo!');
+                return;
+            }
+            if (elements.reportType.value === 'Custom' && !elements.customName.value.trim()) {
+                showError('Vui lòng nhập tên file cho báo cáo tùy chỉnh!');
+                elements.customName.focus();
+                return;
+            }
+            if (elements.customDateCheck.checked && !elements.customDate.value) {
+                showError('Vui lòng chọn ngày upload!');
+                elements.customDate.focus();
+                return;
+            }
+
+            const files = Array.from(elements.fileInput.files).slice(0, CONFIG.MAX_FILES);
+            if (files.length === 0) {
+                showError('Vui lòng chọn ít nhất một ảnh!');
+                return;
+            }
+
+            updateUI(true);
+            state.abortController = new AbortController();
+            const formData = new FormData();
+            formData.append('ftpAccount', elements.ftpAccount.value);
+            formData.append('reportType', elements.reportType.value);
+            formData.append('customName', sanitizeFileName(elements.customName.value));
+            if (elements.customDateCheck.checked) {
+                formData.append('customDate', elements.customDate.value);
+            }
+
+            for (const file of files) {
+                formData.append('images[]', file);
+            }
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: state.abortController.signal
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Lỗi server không xác định');
+                    console.error('Fetch error:', response.status, errorText);
+                    throw new Error(`Lỗi server: ${response.status} - ${errorText}`);
+                }
+
+                const json = await response.json();
+                if (json.success) {
+                    showPopup(json.message);
+                    showToast(json.message, 'success');
+                    if (json.files) {
+                        json.files.forEach(file => {
+                            elements.fileProgress.textContent += `Đã upload: ${file}\n`;
+                        });
+                    }
+                    elements.progress.value = 100;
+                    elements.progressInfo.textContent = 'Hoàn tất!';
+                } else {
+                    showError(json.message);
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showError(error.message);
+                }
+            } finally {
+                updateUI(false);
+                state.abortController = null;
+            }
+        });
+
+        function showPopup(message) {
+            elements.successMessage.className = 'success-message';
+            elements.successMessage.textContent = message;
+            elements.successPopup.style.display = 'block';
+            elements.successPopup.classList.add('active');
+        }
+
+        function closePopup() {
+            elements.successPopup.classList.remove('active');
+            elements.successPopup.style.display = 'none';
+            elements.form.reset();
+            elements.previewContainer.innerHTML = '';
+            clearError();
+            elements.customName.style.display = 'none';
+            elements.customDate.style.display = 'none';
+            elements.customDateCheck.checked = false;
+            elements.progress.style.display = 'none';
+            elements.progressInfo.textContent = '';
+            elements.fileProgress.textContent = '';
+            elements.ftpAccount.value = '';
+            elements.reportType.value = '';
+            saveFtpAccount();
+        }
+
+        async function displayHistoryByDate() {
+            const date = document.getElementById('historyDate').value;
+            const ftpAccount = document.getElementById('ftpAccountHistory').value;
+            const historyTable = document.getElementById('historyTable');
+            historyTable.classList.add('loading');
+
+            if (!ftpAccount) {
+                historyTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
+                historyTable.classList.remove('loading');
+                showToast('Vui lòng chọn tài khoản FTP!', 'error');
+                return;
+            }
+            if (!date) {
+                historyTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
+                historyTable.classList.remove('loading');
+                showToast('Vui lòng chọn ngày!', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('ftpAccount', ftpAccount);
+                formData.append('date', date);
+                const response = await fetch('/list_files_by_date', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await response.json();
+                if (json.success) {
+                    const fakeTime = new Date().toLocaleTimeString('vi-VN');
+                    historyTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tên file</th>
+                                    <th>Thời gian</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${json.files.map(file => `
+                                    <tr>
+                                        <td>${file}</td>
+                                        <td>${fakeTime}</td>
+                                        <td><button class="action-preview" onclick="alert('Tính năng xem trước đang phát triển!')">Xem trước</button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    showToast('Tải lịch sử thành công!', 'success');
+                } else {
+                    historyTable.innerHTML = `<p class="error">${json.message}</p>`;
+                    showToast(json.message, 'error');
+                }
+            } catch (error) {
+                historyTable.innerHTML = `<p class="error">Lỗi khi tải danh sách file: ${error.message}</p>`;
+                showToast(`Lỗi: ${error.message}`, 'error');
+            } finally {
+                historyTable.classList.remove('loading');
+            }
+        }
+
+        async function displayCheckReport() {
+            const date = document.getElementById('checkDate').value;
+            const ftpAccount = document.getElementById('ftpAccountCheck').value;
+            const checkTable = document.getElementById('checkTable');
+            checkTable.classList.add('loading');
+
+            if (!ftpAccount) {
+                checkTable.innerHTML = '<p class="error">Vui lòng chọn tài khoản FTP trước!</p>';
+                checkTable.classList.remove('loading');
+                showToast('Vui lòng chọn tài khoản FTP!', 'error');
+                return;
+            }
+            if (!date) {
+                checkTable.innerHTML = '<p class="error">Vui lòng chọn ngày!</p>';
+                checkTable.classList.remove('loading');
+                showToast('Vui lòng chọn ngày!', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('ftpAccount', ftpAccount);
+                formData.append('date', date);
+                const response = await fetch('/check_reports', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await response.json();
+                if (json.success) {
+                    checkTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Loại báo cáo</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Báo Cáo Biên Bản Đóng Mở Cửa</td><td>${json.reports.BCDongMoCua ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Giao Ban</td><td>${json.reports.BaoCaoGiaoBan ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Thay Đổi Giá</td><td>${json.reports.ThayDoiGia ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Bật Tắt Mặt Tiền</td><td>${json.reports.BatTatMatTien ? '✅' : '❌'}</td></tr>
+                                <tr><td>Báo Cáo Đào Tạo</td><td>${json.reports.BCDaoTao ? '✅' : '❌'}</td></tr>
+                            </tbody>
+                        </table>
+                    `;
+                    showToast('Kiểm tra báo cáo thành công!', 'success');
+                } else {
+                    checkTable.innerHTML = `<p class="error">${json.message}</p>`;
+                    showToast(json.message, 'error');
+                }
+            } catch (error) {
+                checkTable.innerHTML = `<p class="error">Lỗi khi kiểm tra báo cáo: ${error.message}</p>`;
+                showToast(`Lỗi: ${error.message}`, 'error');
+            } finally {
+                checkTable.classList.remove('loading');
+            }
+        }
+
+        function openHistoryPopup() {
+            document.getElementById('historyPopup').classList.add('active');
+            document.getElementById('historyPopup').style.display = 'block';
+        }
+
+        function closeHistoryPopup() {
+            document.getElementById('historyPopup').classList.remove('active');
+            document.getElementById('historyPopup').style.display = 'none';
+            document.getElementById('historyTable').innerHTML = '';
+            document.getElementById('historyDate').value = '';
+            document.getElementById('ftpAccountHistory').value = '';
+        }
+
+        function openCheckPopup() {
+            document.getElementById('checkPopup').classList.add('active');
+            document.getElementById('checkPopup').style.display = 'block';
+        }
+
+        function closeCheckPopup() {
+            document.getElementById('checkPopup').classList.remove('active');
+            document.getElementById('checkPopup').style.display = 'none';
+            document.getElementById('checkTable').innerHTML = '';
+            document.getElementById('checkDate').value = '';
+            document.getElementById('ftpAccountCheck').value = '';
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreFtpAccount();
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.querySelector('.theme-icon').textContent = '☀️';
+            }
+            document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
+            document.getElementById('checkMenu').addEventListener('click', openCheckPopup);
+            document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);
+            document.getElementById('fetchCheck').addEventListener('click', displayCheckReport);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        });
+    </script>
 </body>
 </html>
