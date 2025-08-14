@@ -510,6 +510,325 @@ progress::-moz-progress-bar {
     border-radius: 4px;
 }
 
+/* Keyboard Shortcuts Help */
+.shortcuts-help {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.shortcuts-help i {
+    font-size: 16px;
+}
+
+/* Auto-save Indicator */
+.auto-save-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 25px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.auto-save-indicator.show {
+    transform: translateX(0);
+}
+
+/* Progress Container cải tiến */
+.progress-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #28a745);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-details {
+    font-size: 14px;
+    color: #6c757d;
+    text-align: center;
+}
+
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+.button-group button {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.button-group button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.button-group button:active {
+    transform: translateY(0);
+}
+
+/* Drop Zone cải tiến */
+.drop-zone {
+    border: 2px dashed #007bff;
+    border-radius: 15px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    margin: 20px 0;
+}
+
+.drop-zone:hover {
+    border-color: #0056b3;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+}
+
+.drop-zone.dragover {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #e8f5e8 0%, #c3e6c3 100%);
+    transform: scale(1.02);
+    box-shadow: 0 12px 35px rgba(40,167,69,0.2);
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.drop-zone-content i {
+    font-size: 48px;
+    color: #007bff;
+}
+
+.drop-zone-content p {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: #495057;
+}
+
+.drop-zone-content small {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-content h3 {
+    margin: 0;
+    padding: 20px 20px 10px 20px;
+    border-bottom: 1px solid #e9ecef;
+    color: #495057;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+.file-info {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.file-info p {
+    margin: 5px 0;
+    color: #495057;
+}
+
+/* Toast cải tiến */
+.toast {
+    background: white;
+    color: #333;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    border-left: 4px solid #007bff;
+    max-width: 400px;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    border-left-color: #28a745;
+}
+
+.toast-error {
+    border-left-color: #dc3545;
+}
+
+.toast i {
+    font-size: 18px;
+}
+
+.toast-success i {
+    color: #28a745;
+}
+
+.toast-error i {
+    color: #dc3545;
+}
+
+/* Dark mode improvements */
+.dark-mode .shortcuts-help {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.dark-mode .progress-container {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+.dark-mode .drop-zone {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+}
+
+.dark-mode .drop-zone:hover {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.dark-mode .drop-zone.dragover {
+    background: linear-gradient(135deg, #2f855a 0%, #38a169 100%);
+}
+
+.dark-mode .modal-content {
+    background-color: #2d3748;
+    color: #e2e8f0;
+}
+
+.dark-mode .file-info {
+    background: #4a5568;
+    color: #e2e8f0;
+}
+
+.dark-mode .toast {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .container {
@@ -605,4 +924,212 @@ progress::-moz-progress-bar {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Animation cho progress bar */
+.progress-fill {
+    background: linear-gradient(90deg, #007bff, #28a745, #ffc107, #dc3545);
+    background-size: 200% 100%;
+    animation: progressShine 2s ease-in-out infinite;
+}
+
+@keyframes progressShine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Loading state cho buttons */
+.button-group button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.button-group button.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success Items */
+.success-item {
+    background: #d4edda;
+    color: #155724;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border-left: 4px solid #28a745;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .button-group button {
+        min-width: auto;
+    }
+    
+    .shortcuts-help {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    .shortcuts-help span {
+        display: none;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .drop-zone {
+        padding: 30px 15px;
+    }
+    
+    .drop-zone-content i {
+        font-size: 36px;
+    }
+    
+    .drop-zone-content p {
+        font-size: 16px;
+    }
+    
+    .progress-container {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .progress-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .auto-save-indicator {
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .drop-zone {
+        padding: 25px 15px;
+    }
+    
+    .drop-zone-content i {
+        font-size: 32px;
+    }
+    
+    .drop-zone-content p {
+        font-size: 14px;
+    }
+    
+    .drop-zone-content small {
+        font-size: 12px;
+    }
+    
+    .button-group button {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+    
+    .shortcuts-help {
+        margin-bottom: 15px;
+    }
+    
+    .progress-container {
+        padding: 12px;
+    }
+    
+    .progress-header {
+        font-size: 14px;
+    }
+    
+    .progress-details {
+        font-size: 12px;
+    }
+}
+
+/* Hover effects for better UX */
+.drop-zone:hover .drop-zone-content i {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+.button-group button:hover i {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+/* Focus states for accessibility */
+.button-group button:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.drop-zone:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Smooth transitions */
+* {
+    transition: all 0.2s ease;
+}
+
+/* Print styles */
+@media print {
+    .shortcuts-help,
+    .auto-save-indicator,
+    .theme-toggle-container,
+    .button-group {
+        display: none !important;
+    }
+    
+    .container {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .drop-zone {
+        border: 1px solid #ccc;
+        background: white;
+    }
 }

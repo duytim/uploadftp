@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Ảnh Báo Cáo</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <!-- Thêm Font Awesome cho icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <h2>Upload Ảnh Báo Cáo</h2>
+        
+        <!-- Keyboard Shortcuts Help -->
+        <div class="shortcuts-help" id="shortcutsHelp">
+            <i class="fas fa-keyboard"></i>
+            <span>Phím tắt: Ctrl+U (Upload), Ctrl+D (Drag & Drop), Ctrl+H (Lịch sử), Ctrl+K (Kiểm tra)</span>
+        </div>
+        
         <form id="uploadForm" enctype="multipart/form-data" aria-label="Form upload ảnh">
             <select id="ftpAccount" name="ftpAccount" aria-label="Tài khoản FTP" required>
                 <option value="" disabled selected>Chọn tài khoản FTP</option>
@@ -31,31 +40,68 @@
                 Upload theo ngày tùy chọn
             </label>
             <input type="date" id="customDate" name="customDate" style="display:none" aria-label="Chọn ngày upload">
+            
+            <!-- Cải tiến Drop Zone -->
             <div class="drop-zone" id="dropZone" aria-label="Kéo thả ảnh vào đây">
-                Kéo thả tối đa 5 ảnh hoặc nhấn để chọn
+                <div class="drop-zone-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Kéo thả tối đa 5 ảnh hoặc nhấn để chọn</p>
+                    <small>Hỗ trợ: JPEG, PNG, GIF (tối đa 10MB/file)</small>
+                </div>
                 <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/gif" multiple style="display:none" aria-hidden="true">
             </div>
+            
             <div class="preview-container" id="previewContainer"></div>
-            <button type="submit" id="uploadButton">Upload</button>
-            <button type="button" id="historyMenu">Lịch sử</button>
-            <button type="button" id="checkMenu">Kiểm tra</button>
-            <button type="button" id="cancelButton" style="display:none">Hủy</button>
-            <progress id="progress" value="0" max="100" style="display:none" aria-label="Thanh tiến trình upload"></progress>
-            <div id="progress-info"></div>
-            <div id="file-progress" aria-live="polite"></div>
+            
+            <!-- Progress Bar cải tiến -->
+            <div class="progress-container" id="progressContainer" style="display:none">
+                <div class="progress-header">
+                    <span id="progressText">Đang chuẩn bị upload...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-details" id="progressDetails"></div>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" id="uploadButton">
+                    <i class="fas fa-upload"></i>
+                    <span>Upload</span>
+                </button>
+                <button type="button" id="historyMenu">
+                    <i class="fas fa-history"></i>
+                    <span>Lịch sử</span>
+                </button>
+                <button type="button" id="checkMenu">
+                    <i class="fas fa-search"></i>
+                    <span>Kiểm tra</span>
+                </button>
+                <button type="button" id="cancelButton" style="display:none">
+                    <i class="fas fa-times"></i>
+                    <span>Hủy</span>
+                </button>
+            </div>
+            
             <div id="result" aria-live="polite"></div>
         </form>
+        
         <div class="theme-toggle-container">
             <button id="themeToggle" aria-label="Chuyển đổi giao diện">
                 <span class="theme-icon">🌙</span>
             </button>
         </div>
     </div>
+    
+    <!-- Success Popup -->
     <div class="popup" id="successPopup" role="dialog" aria-labelledby="successPopupTitle">
         <h3 id="successPopupTitle">Upload Thành Công!</h3>
         <p id="successMessage"></p>
         <button onclick="closePopup()">OK</button>
     </div>
+    
+    <!-- History Popup với File Preview -->
     <div class="popup" id="historyPopup" role="dialog" aria-labelledby="historyPopupTitle">
         <h3 id="historyPopupTitle">Lịch sử file đã upload</h3>
         <select id="ftpAccountHistory" name="ftpAccountHistory" aria-label="Tài khoản FTP" required>
@@ -69,6 +115,8 @@
         <div id="historyTable" class="table-container"></div>
         <button onclick="closeHistoryPopup()">Đóng</button>
     </div>
+    
+    <!-- Check Popup -->
     <div class="popup" id="checkPopup" role="dialog" aria-labelledby="checkPopupTitle">
         <h3 id="checkPopupTitle">Kiểm tra báo cáo</h3>
         <select id="ftpAccountCheck" name="ftpAccountCheck" aria-label="Tài khoản FTP" required>
@@ -82,16 +130,43 @@
         <div id="checkTable" class="table-container"></div>
         <button onclick="closeCheckPopup()">Đóng</button>
     </div>
+    
+    <!-- File Preview Modal -->
+    <div class="modal" id="filePreviewModal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <h3 id="modalTitle">Xem trước file</h3>
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="Preview" style="max-width: 100%; height: auto;">
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
+    
+    <!-- Auto-save indicator -->
+    <div class="auto-save-indicator" id="autoSaveIndicator">
+        <i class="fas fa-save"></i>
+        <span>Đã lưu tự động</span>
+    </div>
 
     <script>
         const CONFIG = {
             MAX_FILE_SIZE: 10 * 1024 * 1024,
             MAX_FILES: 5,
-            ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif']
+            ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
+            AUTO_SAVE_DELAY: 2000 // 2 giây
         };
 
-        const state = { isUploading: false, abortController: null };
+        const state = { 
+            isUploading: false, 
+            abortController: null,
+            autoSaveTimer: null,
+            formData: {}
+        };
+        
         const elements = {
             form: document.getElementById('uploadForm'),
             ftpAccount: document.getElementById('ftpAccount'),
@@ -104,19 +179,25 @@
             previewContainer: document.getElementById('previewContainer'),
             uploadButton: document.getElementById('uploadButton'),
             cancelButton: document.getElementById('cancelButton'),
-            progress: document.getElementById('progress'),
-            progressInfo: document.getElementById('progress-info'),
-            fileProgress: document.getElementById('file-progress'),
+            progressContainer: document.getElementById('progressContainer'),
+            progressFill: document.getElementById('progressFill'),
+            progressText: document.getElementById('progressText'),
+            progressPercent: document.getElementById('progressPercent'),
+            progressDetails: document.getElementById('progressDetails'),
             result: document.getElementById('result'),
             successPopup: document.getElementById('successPopup'),
-            successMessage: document.getElementById('successMessage')
+            successMessage: document.getElementById('successMessage'),
+            autoSaveIndicator: document.getElementById('autoSaveIndicator')
         };
 
         // Toast Notification
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
-            toast.textContent = message;
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
             document.getElementById('toastContainer').appendChild(toast);
             setTimeout(() => {
                 toast.classList.add('show');
@@ -145,11 +226,12 @@
             elements.uploadButton.disabled = uploading;
             elements.uploadButton.textContent = uploading ? 'Đang upload...' : 'Upload';
             elements.cancelButton.style.display = uploading ? 'inline-block' : 'none';
-            elements.progress.style.display = uploading ? 'block' : 'none';
-            elements.progressInfo.textContent = uploading ? 'Đang xử lý...' : '';
+            elements.progressContainer.style.display = uploading ? 'block' : 'none';
+            elements.progressText.textContent = uploading ? 'Đang xử lý...' : 'Đang chuẩn bị upload...';
             if (!uploading) {
-                elements.fileProgress.textContent = '';
-                elements.progress.value = 0;
+                elements.progressPercent.textContent = '0%';
+                elements.progressFill.style.width = '0%';
+                elements.progressDetails.textContent = '';
             }
             elements.uploadButton.classList.toggle('loading', uploading);
         }
@@ -322,7 +404,27 @@
                 formData.append('images[]', file);
             }
 
+            // Progress tracking
+            let currentFile = 0;
+            const totalFiles = files.length;
+            
             try {
+                // Simulate progress for each file
+                for (let i = 0; i < totalFiles; i++) {
+                    currentFile = i + 1;
+                    const progress = Math.round((currentFile / totalFiles) * 100);
+                    const fileName = files[i].name;
+                    
+                    updateProgress(
+                        progress,
+                        `Đang upload file ${currentFile}/${totalFiles}`,
+                        `File: ${fileName}`
+                    );
+                    
+                    // Simulate file processing time
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData,
@@ -337,15 +439,14 @@
 
                 const json = await response.json();
                 if (json.success) {
+                    updateProgress(100, 'Hoàn tất upload!', `Đã upload ${totalFiles} file thành công`);
                     showPopup(json.message);
                     showToast(json.message, 'success');
                     if (json.files) {
                         json.files.forEach(file => {
-                            elements.fileProgress.textContent += `Đã upload: ${file}\n`;
+                            elements.result.innerHTML += `<div class="success-item">✅ ${file}</div>`;
                         });
                     }
-                    elements.progress.value = 100;
-                    elements.progressInfo.textContent = 'Hoàn tất!';
                 } else {
                     showError(json.message);
                 }
@@ -375,14 +476,203 @@
             elements.customName.style.display = 'none';
             elements.customDate.style.display = 'none';
             elements.customDateCheck.checked = false;
-            elements.progress.style.display = 'none';
-            elements.progressInfo.textContent = '';
-            elements.fileProgress.textContent = '';
+            elements.progressContainer.style.display = 'none';
+            elements.progressFill.style.width = '0%';
+            elements.progressPercent.textContent = '0%';
+            elements.progressText.textContent = 'Đang chuẩn bị upload...';
+            elements.progressDetails.textContent = '';
             elements.ftpAccount.value = '';
             elements.reportType.value = '';
             saveFtpAccount();
         }
 
+        // Auto-save functionality
+        function setupAutoSave() {
+            const formFields = [elements.ftpAccount, elements.reportType, elements.customName, elements.customDate];
+            
+            formFields.forEach(field => {
+                if (field) {
+                    field.addEventListener('input', debounce(saveFormData, CONFIG.AUTO_SAVE_DELAY));
+                    field.addEventListener('change', debounce(saveFormData, CONFIG.AUTO_SAVE_DELAY));
+                }
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function saveFormData() {
+            state.formData = {
+                ftpAccount: elements.ftpAccount.value,
+                reportType: elements.reportType.value,
+                customName: elements.customName.value,
+                customDate: elements.customDate.value,
+                customDateCheck: elements.customDateCheck.checked
+            };
+            localStorage.setItem('uploadFormData', JSON.stringify(state.formData));
+            showAutoSaveIndicator();
+        }
+
+        function restoreFormData() {
+            const saved = localStorage.getItem('uploadFormData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.ftpAccount) elements.ftpAccount.value = data.ftpAccount;
+                    if (data.reportType) {
+                        elements.reportType.value = data.reportType;
+                        if (data.reportType === 'Custom') {
+                            elements.customName.style.display = 'block';
+                            if (data.customName) elements.customName.value = data.customName;
+                        }
+                    }
+                    if (data.customDateCheck && data.customDate) {
+                        elements.customDateCheck.checked = true;
+                        elements.customDate.style.display = 'block';
+                        elements.customDate.value = data.customDate;
+                    }
+                } catch (e) {
+                    console.error('Error restoring form data:', e);
+                }
+            }
+        }
+
+        function showAutoSaveIndicator() {
+            elements.autoSaveIndicator.classList.add('show');
+            setTimeout(() => {
+                elements.autoSaveIndicator.classList.remove('show');
+            }, 2000);
+        }
+
+        // Keyboard Shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'u':
+                            e.preventDefault();
+                            if (!state.isUploading) {
+                                elements.form.dispatchEvent(new Event('submit'));
+                            }
+                            break;
+                        case 'd':
+                            e.preventDefault();
+                            if (!state.isUploading) {
+                                elements.fileInput.click();
+                            }
+                            break;
+                        case 'h':
+                            e.preventDefault();
+                            openHistoryPopup();
+                            break;
+                        case 'k':
+                            e.preventDefault();
+                            openCheckPopup();
+                            break;
+                    }
+                }
+            });
+        }
+
+        // File Preview từ FTP
+        async function previewFileFromFTP(ftpAccount, date, filename) {
+            try {
+                const formData = new FormData();
+                formData.append('ftpAccount', ftpAccount);
+                formData.append('date', date);
+                formData.append('filename', filename);
+                
+                const response = await fetch('/preview_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showFilePreviewModal(data.image_data, filename);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                showToast('Lỗi khi tải preview: ' + error.message, 'error');
+            }
+        }
+
+        function showFilePreviewModal(imageData, filename) {
+            const modal = document.getElementById('filePreviewModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalTitle = document.getElementById('modalTitle');
+            const fileInfo = document.getElementById('fileInfo');
+            
+            modalImage.src = imageData;
+            modalTitle.textContent = `Xem trước: ${filename}`;
+            fileInfo.innerHTML = `
+                <p><strong>Tên file:</strong> ${filename}</p>
+                <p><strong>Loại:</strong> ${filename.split('.').pop().toUpperCase()}</p>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        // Progress Bar cải tiến
+        function updateProgress(percent, text, details = '') {
+            elements.progressFill.style.width = `${percent}%`;
+            elements.progressPercent.textContent = `${percent}%`;
+            elements.progressText.textContent = text;
+            if (details) {
+                elements.progressDetails.textContent = details;
+            }
+        }
+
+        // Cải tiến Drag & Drop
+        function setupEnhancedDragDrop() {
+            elements.dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!state.isUploading) {
+                    elements.dropZone.classList.add('dragover');
+                    elements.dropZone.querySelector('.drop-zone-content').innerHTML = `
+                        <i class="fas fa-file-image"></i>
+                        <p>Thả file để upload</p>
+                        <small>Đang kéo ${e.dataTransfer.files.length} file</small>
+                    `;
+                }
+            });
+
+            elements.dropZone.addEventListener('dragleave', () => {
+                elements.dropZone.classList.remove('dragover');
+                elements.dropZone.querySelector('.drop-zone-content').innerHTML = `
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Kéo thả tối đa 5 ảnh hoặc nhấn để chọn</p>
+                    <small>Hỗ trợ: JPEG, PNG, GIF (tối đa 10MB/file)</small>
+                `;
+            });
+
+            elements.dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('dragover');
+                elements.dropZone.querySelector('.drop-zone-content').innerHTML = `
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Kéo thả tối đa 5 ảnh hoặc nhấn để chọn</p>
+                    <small>Hỗ trợ: JPEG, PNG, GIF (tối đa 10MB/file)</small>
+                `;
+                
+                if (!state.isUploading) {
+                    elements.fileInput.files = e.dataTransfer.files;
+                    previewImages();
+                }
+            });
+        }
+
+        // Cải tiến History với File Preview
         async function displayHistoryByDate() {
             const date = document.getElementById('historyDate').value;
             const ftpAccount = document.getElementById('ftpAccountHistory').value;
@@ -427,7 +717,11 @@
                                     <tr>
                                         <td>${file}</td>
                                         <td>${fakeTime}</td>
-                                        <td><button class="action-preview" onclick="alert('Tính năng xem trước đang phát triển!')">Xem trước</button></td>
+                                        <td>
+                                            <button class="action-preview" onclick="previewFileFromFTP('${ftpAccount}', '${date}', '${file}')">
+                                                <i class="fas fa-eye"></i> Xem trước
+                                            </button>
+                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -538,12 +832,35 @@
             document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
         }
 
+        // Modal functions
+        function closeFilePreviewModal() {
+            document.getElementById('filePreviewModal').style.display = 'none';
+        }
+
+        // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             restoreFtpAccount();
+            restoreFormData();
+            setupAutoSave();
+            setupKeyboardShortcuts();
+            setupEnhancedDragDrop();
+            
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
                 document.querySelector('.theme-icon').textContent = '☀️';
             }
+            
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                const modal = document.getElementById('filePreviewModal');
+                if (event.target === modal) {
+                    closeFilePreviewModal();
+                }
+            }
+            
+            // Close modal button
+            document.getElementById('closeModal').onclick = closeFilePreviewModal;
+            
             document.getElementById('historyMenu').addEventListener('click', openHistoryPopup);
             document.getElementById('checkMenu').addEventListener('click', openCheckPopup);
             document.getElementById('fetchHistory').addEventListener('click', displayHistoryByDate);

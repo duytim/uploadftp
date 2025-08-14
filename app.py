@@ -1,10 +1,12 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_file
 import ftplib
 import os
 from datetime import datetime
 import logging
 import pytz
 from dotenv import load_dotenv
+import io
+import base64
 
 app = Flask(__name__)
 
@@ -251,6 +253,80 @@ def check_reports():
     except ftplib.all_errors as e:
         logger.error(f"FTP error: {str(e)}")
         return jsonify({'success': False, 'message': f'Lỗi kết nối FTP: {str(e)}'}), 500
+    finally:
+        if ftp_conn:
+            try:
+                ftp_conn.quit()
+                logger.debug("FTP connection closed")
+            except:
+                pass
+
+@app.route('/preview_image', methods=['POST'])
+def preview_image():
+    ftp_conn = None
+    try:
+        ftp_account_id = request.form.get('ftpAccount')
+        date = request.form.get('date')
+        filename = request.form.get('filename')
+        
+        if not all([ftp_account_id, date, filename]):
+            return jsonify({'success': False, 'message': 'Thiếu thông tin cần thiết!'}), 400
+            
+        if ftp_account_id not in FTP_ACCOUNTS:
+            return jsonify({'success': False, 'message': 'Tài khoản FTP không hợp lệ!'}), 400
+
+        ftp = FTP_ACCOUNTS[ftp_account_id]
+        ftp_conn = ftplib.FTP()
+        ftp_conn.connect(ftp['server'], timeout=60)
+        ftp_conn.login(ftp['username'], ftp['password'])
+        ftp_conn.set_pasv(True)
+
+        try:
+            selected_date = datetime.strptime(date, '%Y-%m-%d')
+            ftp_date = selected_date.strftime('%d.%m.%y')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Định dạng ngày không hợp lệ!'}), 400
+
+        ftp_directory = f"/KSQT/{ftp_date}/"
+        
+        try:
+            ftp_conn.cwd(ftp_directory)
+        except ftplib.all_errors:
+            return jsonify({'success': False, 'message': f'Thư mục cho ngày {ftp_date} không tồn tại!'}), 404
+
+        # Tạo buffer để lưu file
+        file_buffer = io.BytesIO()
+        
+        try:
+            ftp_conn.retrbinary(f'RETR {filename}', file_buffer.write)
+            file_buffer.seek(0)
+            
+            # Chuyển đổi sang base64 để hiển thị trong HTML
+            file_data = file_buffer.getvalue()
+            file_base64 = base64.b64encode(file_data).decode('utf-8')
+            
+            # Xác định MIME type
+            mime_type = 'image/jpeg'  # Mặc định
+            if filename.lower().endswith('.png'):
+                mime_type = 'image/png'
+            elif filename.lower().endswith('.gif'):
+                mime_type = 'image/gif'
+                
+            return jsonify({
+                'success': True,
+                'image_data': f'data:{mime_type};base64,{file_base64}',
+                'filename': filename
+            })
+            
+        except ftplib.all_errors as e:
+            return jsonify({'success': False, 'message': f'Không thể đọc file: {str(e)}'}), 500
+
+    except ftplib.all_errors as e:
+        logger.error(f"FTP error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Lỗi kết nối FTP: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Lỗi không xác định: {str(e)}'}), 500
     finally:
         if ftp_conn:
             try:
